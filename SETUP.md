@@ -98,15 +98,15 @@ feat(2.3): implement login page with form validation
 - [x] **COMMIT: `feat(1.2): configure database connection and Prisma setup`**
 
 ### 1.3 Database Schema Design
-- [ ] Create `users` table schema (id, username, password_hash, created_at)
-- [ ] Create `client_databases` table schema (id, name, password_hash, timeout_minutes, custom_fields, user_id)
-- [ ] Create `clients` table schema (id, name, database_id, custom_data, last_access, created_at)
-- [ ] Create `access_points` table schema (id, client_id, name, created_at)
-- [ ] Create `access_details` table schema (id, access_point_id, content, last_edited_by, last_edited_at)
-- [ ] Create `access_images` table schema (id, access_point_id, filename, image_data, mime_type, created_at)
-- [ ] Create `access_details_history` table schema for audit trail
-- [ ] Run first migration: `npx prisma migrate dev`
-- [ ] **COMMIT: `feat(1.3): create complete database schema and run migrations`**
+- [x] Create `users` table schema (id, username, password_hash, created_at)
+- [x] Create `client_databases` table schema (id, name, password_hash, timeout_minutes, custom_fields, user_id)
+- [x] Create `clients` table schema (id, name, database_id, custom_data, last_access, created_at)
+- [x] Create `access_points` table schema (id, client_id, name, created_at)
+- [x] Create `access_details` table schema (id, access_point_id, content, last_edited_by, last_edited_at)
+- [x] Create `access_images` table schema (id, access_point_id, filename, image_data, mime_type, created_at)
+- [x] Create `access_details_history` table schema for audit trail
+- [x] Run first migration: `npx prisma migrate dev`
+- [x] **COMMIT: `feat(1.3): create complete database schema and run migrations`**
 
 ### 1.4 Essential Dependencies
 - [ ] Install authentication: `npm install jsonwebtoken bcryptjs @types/jsonwebtoken @types/bcryptjs`
