@@ -120,13 +120,13 @@ feat(2.3): implement login page with form validation
 ## Stage 2: Authentication System
 
 ### 2.1 Core shadcn/ui Components
-- [ ] Add button component: `npx shadcn-ui@latest add button`
-- [ ] Add input component: `npx shadcn-ui@latest add input`
-- [ ] Add card component: `npx shadcn-ui@latest add card`
-- [ ] Add form component: `npx shadcn-ui@latest add form`
-- [ ] Add alert component: `npx shadcn-ui@latest add alert`
-- [ ] Add toast component: `npx shadcn-ui@latest add toast`
-- [ ] **COMMIT: `feat(2.1): add core shadcn/ui components for authentication`**
+- [x] Add button component: `npx shadcn-ui@latest add button`
+- [x] Add input component: `npx shadcn-ui@latest add input`
+- [x] Add card component: `npx shadcn-ui@latest add card`
+- [x] Add form component: `npx shadcn-ui@latest add form`
+- [x] Add alert component: `npx shadcn-ui@latest add alert`
+- [x] Add toast component: `npx shadcn-ui@latest add toast`
+- [x] **COMMIT: `feat(2.1): add core shadcn/ui components for authentication`**
 
 ### 2.2 Authentication Utilities
 - [ ] Create `/src/lib/auth.ts` with JWT token generation functions
