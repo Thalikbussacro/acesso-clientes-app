@@ -11,6 +11,9 @@ import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { Database, Users, Plus, ArrowLeft } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
 import { createColumns, type Client } from '@/components/clients/columns'
+import { AddClientDialog } from '@/components/clients/add-client-dialog'
+import { EditClientDialog } from '@/components/clients/edit-client-dialog'
+import { DeleteClientDialog } from '@/components/clients/delete-client-dialog'
 
 interface DatabaseInfo {
   id: string
@@ -33,6 +36,14 @@ export default function ClientsPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRevalidationModal, setShowRevalidationModal] = useState(false)
   const [hasValidSession, setHasValidSession] = useState(false)
+  const [clients, setClients] = useState<Client[]>([])
+  const [isLoadingClients, setIsLoadingClients] = useState(false)
+  
+  // Dialog states
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   
   // Mock custom fields for testing
   const mockCustomFields: CustomField[] = [
@@ -56,51 +67,6 @@ export default function ClientsPage() {
     },
   ]
 
-  // Mock client data for testing
-  const mockClients: Client[] = [
-    {
-      id: '1',
-      name: 'João Silva',
-      email: 'joao.silva@email.com',
-      phone: '(11) 99999-9999',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      customFields: {
-        company: 'Tech Solutions Ltda',
-        priority: true,
-        last_contact: new Date(Date.now() - 2 * 86400000).toISOString(),
-      },
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      email: 'maria.santos@email.com',
-      phone: '(11) 88888-8888',
-      status: 'active',
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-      customFields: {
-        company: 'Inovação Digital',
-        priority: false,
-        last_contact: new Date(Date.now() - 7 * 86400000).toISOString(),
-      },
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      email: null,
-      phone: '(11) 77777-7777',
-      status: 'inactive',
-      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-      updatedAt: new Date(Date.now() - 172800000).toISOString(),
-      customFields: {
-        company: 'Consultoria ABC',
-        priority: false,
-        last_contact: new Date(Date.now() - 30 * 86400000).toISOString(),
-      },
-    },
-  ]
   
   const router = useRouter()
   const params = useParams()
@@ -176,6 +142,48 @@ export default function ClientsPage() {
     })
   }, [router, databaseId, checkSession, fetchDatabaseInfo])
 
+  // Fetch clients from API
+  const fetchClients = useCallback(async () => {
+    if (!hasValidSession) return
+
+    setIsLoadingClients(true)
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch(`/api/clients?database_id=${databaseId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setClients(data.clients || [])
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        console.error('Failed to fetch clients')
+        setClients([])
+      }
+    } catch (error) {
+      console.error('Error fetching clients:', error)
+      setClients([])
+    } finally {
+      setIsLoadingClients(false)
+    }
+  }, [databaseId, hasValidSession, router])
+
+  // Fetch clients when session is valid
+  useEffect(() => {
+    if (hasValidSession) {
+      fetchClients()
+    }
+  }, [hasValidSession, fetchClients])
+
   // Handle session expiry from timer
   const handleSessionExpired = useCallback(() => {
     setHasValidSession(false)
@@ -204,21 +212,59 @@ export default function ClientsPage() {
 
   // Client action handlers
   const handleViewClient = useCallback((clientId: string) => {
-    // Navigate to client details page (will be implemented in next sub-stage)
-    console.log('Navigate to client details:', clientId)
-    // router.push(`/clients/${databaseId}/${clientId}`)
-  }, [databaseId])
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      // Update last access timestamp
+      const token = getAuthToken()
+      if (token) {
+        fetch('/api/clients', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id: clientId,
+            update_last_access: true,
+          }),
+        }).catch(console.error)
+      }
+    }
+    console.log('View client details:', clientId)
+    // router.push(`/clients/${databaseId}/${clientId}`) // Will be implemented later
+  }, [clients, databaseId])
 
   const handleEditClient = useCallback((clientId: string) => {
-    // Navigate to client edit page (will be implemented in later sub-stages)
-    console.log('Navigate to client edit:', clientId)
-    // router.push(`/clients/${databaseId}/${clientId}/edit`)
-  }, [databaseId])
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      setSelectedClient(client)
+      setShowEditDialog(true)
+    }
+  }, [clients])
 
   const handleDeleteClient = useCallback((clientId: string) => {
-    // Show delete confirmation (will be implemented in later sub-stages)
-    console.log('Delete client:', clientId)
-    // Show confirmation dialog and delete client
+    const client = clients.find(c => c.id === clientId)
+    if (client) {
+      setSelectedClient(client)
+      setShowDeleteDialog(true)
+    }
+  }, [clients])
+
+  // Dialog handlers
+  const handleClientCreated = useCallback((newClient: Client) => {
+    setClients(prev => [newClient, ...prev])
+  }, [])
+
+  const handleClientUpdated = useCallback((updatedClient: Client) => {
+    setClients(prev => prev.map(client => 
+      client.id === updatedClient.id ? updatedClient : client
+    ))
+    setSelectedClient(null)
+  }, [])
+
+  const handleClientDeleted = useCallback((clientId: string) => {
+    setClients(prev => prev.filter(client => client.id !== clientId))
+    setSelectedClient(null)
   }, [])
 
   // Handle forced logout
@@ -391,24 +437,33 @@ export default function ClientsPage() {
                   Clientes cadastrados nesta base de dados
                 </p>
               </div>
-              <Button className="gap-2">
+              <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
                 <Plus className="h-4 w-4" />
                 Novo Cliente
               </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <DataTable 
-              columns={createColumns(
-                mockCustomFields,
-                handleViewClient,
-                handleEditClient,
-                handleDeleteClient
-              )} 
-              data={mockClients}
-              searchKey="name"
-              searchPlaceholder="Buscar clientes..."
-            />
+            {isLoadingClients ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <Users className="h-8 w-8 animate-pulse mx-auto mb-4 text-blue-600" />
+                  <p className="text-lg">Carregando clientes...</p>
+                </div>
+              </div>
+            ) : (
+              <DataTable 
+                columns={createColumns(
+                  mockCustomFields,
+                  handleViewClient,
+                  handleEditClient,
+                  handleDeleteClient
+                )} 
+                data={clients}
+                searchKey="name"
+                searchPlaceholder="Buscar clientes..."
+              />
+            )}
           </CardContent>
         </Card>
       </div>
@@ -421,6 +476,30 @@ export default function ClientsPage() {
         databaseName={database.name}
         onRevalidationSuccess={handleRevalidationSuccess}
         onForceLogout={handleForceLogout}
+      />
+
+      {/* Client Management Dialogs */}
+      <AddClientDialog
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        databaseId={databaseId}
+        customFields={mockCustomFields}
+        onClientCreated={handleClientCreated}
+      />
+
+      <EditClientDialog
+        isOpen={showEditDialog}
+        onClose={() => setShowEditDialog(false)}
+        client={selectedClient}
+        customFields={mockCustomFields}
+        onClientUpdated={handleClientUpdated}
+      />
+
+      <DeleteClientDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        client={selectedClient}
+        onClientDeleted={handleClientDeleted}
       />
     </div>
   )
