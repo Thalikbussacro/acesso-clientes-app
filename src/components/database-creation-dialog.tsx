@@ -96,7 +96,7 @@ const FIELD_TYPES = [
 
 interface DatabaseCreationDialogProps {
   trigger: React.ReactNode
-  onSubmit?: (data: DatabaseCreationForm) => void
+  onSubmit?: (data: Omit<DatabaseCreationForm, 'confirmPassword'>) => void | Promise<void>
 }
 
 export function DatabaseCreationDialog({ trigger, onSubmit }: DatabaseCreationDialogProps) {
@@ -122,9 +122,10 @@ export function DatabaseCreationDialog({ trigger, onSubmit }: DatabaseCreationDi
   const handleSubmit = async (data: DatabaseCreationForm) => {
     setIsSubmitting(true)
     try {
-      // This will be connected to API in stage 3.4
-      console.log('Database creation data:', data)
-      onSubmit?.(data)
+      // Remove confirmPassword from data before sending to API
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { confirmPassword, ...apiData } = data
+      await onSubmit?.(apiData)
       
       // Reset form and close dialog
       form.reset()

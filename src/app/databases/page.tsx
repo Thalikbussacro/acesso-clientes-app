@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -10,39 +10,46 @@ import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
 import { DatabaseCreationDialog } from '@/components/database-creation-dialog'
 import { Search, Plus, Database, Users, Clock } from 'lucide-react'
 
-// Mock data for development - will be replaced with API calls in stage 3.4
-const mockDatabases = [
-  {
-    id: '1',
-    name: 'Base Principal',
-    clientCount: 45,
-    lastModified: '2024-01-20T10:30:00Z',
-    customFieldsCount: 5,
-    status: 'active'
-  },
-  {
-    id: '2', 
-    name: 'Clientes Especiais',
-    clientCount: 12,
-    lastModified: '2024-01-19T15:45:00Z',
-    customFieldsCount: 3,
-    status: 'active'
-  },
-  {
-    id: '3',
-    name: 'Base Teste',
-    clientCount: 3,
-    lastModified: '2024-01-18T09:20:00Z',
-    customFieldsCount: 2,
-    status: 'inactive'
-  }
-]
+interface Database {
+  id: string
+  name: string
+  clientCount: number
+  lastModified: string
+  customFieldsCount: number
+  status: 'active' | 'inactive'
+  timeoutMinutes: number
+  customFields: unknown[]
+  createdAt: string
+}
 
 export default function DatabasesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filteredDatabases, setFilteredDatabases] = useState(mockDatabases)
+  const [databases, setDatabases] = useState<Database[]>([])
+  const [filteredDatabases, setFilteredDatabases] = useState<Database[]>([])
+  const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+
+  // Fetch databases from API
+  const fetchDatabases = useCallback(async () => {
+    try {
+      const response = await fetch('/api/databases')
+      if (response.ok) {
+        const data = await response.json()
+        setDatabases(data.databases)
+        setError(null)
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        setError('Erro ao carregar bases de dados')
+      }
+    } catch {
+      setError('Erro de conexão')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [router])
 
   useEffect(() => {
     // Check if user is authenticated
@@ -51,27 +58,47 @@ export default function DatabasesPage() {
       router.push('/login')
       return
     }
-    setIsLoading(false)
-  }, [router])
+    fetchDatabases()
+  }, [router, fetchDatabases])
 
   // Filter databases based on search term
   useEffect(() => {
-    const filtered = mockDatabases.filter(db => 
+    const filtered = databases.filter(db => 
       db.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
     setFilteredDatabases(filtered)
-  }, [searchTerm])
+  }, [searchTerm, databases])
 
   const handleDatabaseClick = (databaseId: string) => {
     // Navigate to database password validation page (will be implemented in stage 4.2)
     router.push(`/databases/${databaseId}`)
   }
 
-  const handleDatabaseCreation = (data: unknown) => {
-    // This will be connected to API in stage 3.4
-    console.log('Creating database with data:', data)
-    // For now, just add to mock data (will be replaced with API call)
-    // In production, this would trigger a refresh of the databases list
+  const handleDatabaseCreation = async (data: {
+    name: string
+    password: string
+    timeoutMinutes: number
+    customFields: unknown[]
+  }) => {
+    try {
+      const response = await fetch('/api/databases', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
+
+      if (response.ok) {
+        // Refresh the databases list
+        await fetchDatabases()
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Erro ao criar base de dados')
+      }
+    } catch {
+      setError('Erro de conexão ao criar base de dados')
+    }
   }
 
   const formatLastModified = (date: string) => {
@@ -139,6 +166,13 @@ export default function DatabasesPage() {
             }
           />
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
 
         {/* Results Summary */}
         <div className="mb-4">
