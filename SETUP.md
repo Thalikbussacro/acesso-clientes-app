@@ -81,21 +81,21 @@ feat(2.3): implement login page with form validation
 ## Stage 1: Project Foundation
 
 ### 1.1 Initial Project Setup
-- [ ] Create new Next.js 15 project with TypeScript using `npx create-next-app@latest`
-- [ ] Configure Tailwind CSS
-- [ ] Initialize shadcn/ui with `npx shadcn-ui@latest init`
-- [ ] Create basic folder structure (`/src/app`, `/src/components`, `/src/lib`)
-- [ ] Setup ESLint and Prettier configuration
-- [ ] Initialize Git repository
-- [ ] **COMMIT: `feat(1.1): initial Next.js 15 project setup with TypeScript and Tailwind`**
+- [x] Create new Next.js 15 project with TypeScript using `npx create-next-app@latest`
+- [x] Configure Tailwind CSS
+- [x] Initialize shadcn/ui with `npx shadcn-ui@latest init`
+- [x] Create basic folder structure (`/src/app`, `/src/components`, `/src/lib`)
+- [x] Setup ESLint and Prettier configuration
+- [x] Initialize Git repository
+- [x] **COMMIT: `feat(1.1): initial Next.js 15 project setup with TypeScript and Tailwind`**
 
 ### 1.2 Database Setup
-- [ ] Create Neon PostgreSQL account and database
-- [ ] Install Prisma: `npm install prisma @prisma/client`
-- [ ] Initialize Prisma: `npx prisma init`
-- [ ] Configure DATABASE_URL in `.env.local`
-- [ ] Create initial Prisma schema file
-- [ ] **COMMIT: `feat(1.2): configure database connection and Prisma setup`**
+- [x] Create Neon PostgreSQL account and database
+- [x] Install Prisma: `npm install prisma @prisma/client`
+- [x] Initialize Prisma: `npx prisma init`
+- [x] Configure DATABASE_URL in `.env.local`
+- [x] Create initial Prisma schema file
+- [x] **COMMIT: `feat(1.2): configure database connection and Prisma setup`**
 
 ### 1.3 Database Schema Design
 - [ ] Create `users` table schema (id, username, password_hash, created_at)
