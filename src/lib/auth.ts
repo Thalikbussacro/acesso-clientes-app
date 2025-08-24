@@ -30,3 +30,27 @@ export function extractTokenFromHeader(authHeader: string | null): string | null
   }
   return authHeader.substring(7);
 }
+
+// Helper function for API routes to verify JWT and get user
+export async function verifyJWT(request: { headers: Headers }): Promise<{ userId: string; username: string } | null> {
+  try {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    
+    const token = authHeader.substring(7);
+    const decoded = verifyToken(token);
+    
+    if (!decoded || !decoded.userId) {
+      return null;
+    }
+    
+    return {
+      userId: decoded.userId,
+      username: decoded.username
+    };
+  } catch {
+    return null;
+  }
+}
