@@ -129,11 +129,11 @@ feat(2.3): implement login page with form validation
 - [x] **COMMIT: `feat(2.1): add core shadcn/ui components for authentication`**
 
 ### 2.2 Authentication Utilities
-- [ ] Create `/src/lib/auth.ts` with JWT token generation functions
-- [ ] Create `/src/lib/password.ts` with bcrypt hash/compare functions
-- [ ] Create `/src/lib/db.ts` with Prisma client instance
-- [ ] Create `/src/lib/utils.ts` for common utilities
-- [ ] **COMMIT: `feat(2.2): create authentication and database utility functions`**
+- [x] Create `/src/lib/auth.ts` with JWT token generation functions
+- [x] Create `/src/lib/password.ts` with bcrypt hash/compare functions
+- [x] Create `/src/lib/db.ts` with Prisma client instance
+- [x] Create `/src/lib/utils.ts` for common utilities
+- [x] **COMMIT: `feat(2.2): create authentication and database utility functions`**
 
 ### 2.3 Login Page
 - [ ] Create `/src/app/login/page.tsx` with login form
