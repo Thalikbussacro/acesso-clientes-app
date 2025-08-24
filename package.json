@@ -11,10 +11,12 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@prisma/client": "^6.14.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.541.0",
     "next": "15.5.0",
+    "prisma": "^6.14.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "tailwind-merge": "^3.3.1"
