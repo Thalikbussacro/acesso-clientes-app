@@ -262,14 +262,14 @@ feat(2.3): implement login page with form validation
 - [x] Implement client selection → navigate to details
 - [x] **COMMIT: `feat(5.2): create client list page with dynamic columns`**
 
-### 5.3 Client Management API
-- [ ] Create `/src/app/api/clients/route.ts`
-- [ ] Implement GET endpoint for listing clients
-- [ ] Implement POST endpoint for creating clients
-- [ ] Implement PUT endpoint for updating clients
-- [ ] Handle custom field data storage as JSON
-- [ ] Update last_access timestamp on client view
-- [ ] **COMMIT: `feat(5.3): create client management API endpoints`**
+### 5.3 Client Management API ✅
+- [x] Create `/src/app/api/clients/route.ts`
+- [x] Implement GET endpoint for listing clients
+- [x] Implement POST endpoint for creating clients
+- [x] Implement PUT endpoint for updating clients
+- [x] Handle custom field data storage as JSON
+- [x] Update last_access timestamp on client view
+- [x] **COMMIT: `feat(5.3): create client management API endpoints`**
 
 ### 5.4 Client CRUD Operations
 - [ ] Create "Add Client" dialog
