@@ -9,6 +9,8 @@ import { SessionRevalidationModal } from '@/components/session-revalidation-moda
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
 import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { Database, Users, Plus, ArrowLeft } from 'lucide-react'
+import { DataTable } from '@/components/ui/data-table'
+import { columns, type Client } from '@/components/clients/columns'
 
 interface DatabaseInfo {
   id: string
@@ -24,6 +26,40 @@ export default function ClientsPage() {
   const [error, setError] = useState<string | null>(null)
   const [showRevalidationModal, setShowRevalidationModal] = useState(false)
   const [hasValidSession, setHasValidSession] = useState(false)
+  
+  // Mock client data for testing
+  const mockClients: Client[] = [
+    {
+      id: '1',
+      name: 'João Silva',
+      email: 'joao.silva@email.com',
+      phone: '(11) 99999-9999',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      customFields: {},
+    },
+    {
+      id: '2',
+      name: 'Maria Santos',
+      email: 'maria.santos@email.com',
+      phone: '(11) 88888-8888',
+      status: 'active',
+      createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+      updatedAt: new Date(Date.now() - 86400000).toISOString(),
+      customFields: {},
+    },
+    {
+      id: '3',
+      name: 'Pedro Costa',
+      email: null,
+      phone: '(11) 77777-7777',
+      status: 'inactive',
+      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+      updatedAt: new Date(Date.now() - 172800000).toISOString(),
+      customFields: {},
+    },
+  ]
   
   const router = useRouter()
   const params = useParams()
@@ -302,14 +338,12 @@ export default function ClientsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg mb-2">Funcionalidade em Desenvolvimento</p>
-              <p className="text-gray-400 text-sm max-w-md mx-auto">
-                A lista de clientes e suas funcionalidades serão implementadas nos próximos estágios.
-                Por enquanto, você pode testar o sistema de sessão e timer.
-              </p>
-            </div>
+            <DataTable 
+              columns={columns} 
+              data={mockClients}
+              searchKey="name"
+              searchPlaceholder="Buscar clientes..."
+            />
           </CardContent>
         </Card>
       </div>
