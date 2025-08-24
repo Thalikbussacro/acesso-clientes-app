@@ -10,7 +10,7 @@ import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
 import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { Database, Users, Plus, ArrowLeft } from 'lucide-react'
 import { DataTable } from '@/components/ui/data-table'
-import { columns, type Client } from '@/components/clients/columns'
+import { createColumns, type Client } from '@/components/clients/columns'
 
 interface DatabaseInfo {
   id: string
@@ -20,6 +20,13 @@ interface DatabaseInfo {
   customFieldsCount: number
 }
 
+interface CustomField {
+  id: string
+  name: string
+  type: 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean'
+  required: boolean
+}
+
 export default function ClientsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [database, setDatabase] = useState<DatabaseInfo | null>(null)
@@ -27,6 +34,28 @@ export default function ClientsPage() {
   const [showRevalidationModal, setShowRevalidationModal] = useState(false)
   const [hasValidSession, setHasValidSession] = useState(false)
   
+  // Mock custom fields for testing
+  const mockCustomFields: CustomField[] = [
+    {
+      id: 'company',
+      name: 'Empresa',
+      type: 'text',
+      required: true,
+    },
+    {
+      id: 'priority',
+      name: 'Prioridade',
+      type: 'boolean',
+      required: false,
+    },
+    {
+      id: 'last_contact',
+      name: 'Último Contato',
+      type: 'date',
+      required: false,
+    },
+  ]
+
   // Mock client data for testing
   const mockClients: Client[] = [
     {
@@ -37,7 +66,11 @@ export default function ClientsPage() {
       status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      customFields: {},
+      customFields: {
+        company: 'Tech Solutions Ltda',
+        priority: true,
+        last_contact: new Date(Date.now() - 2 * 86400000).toISOString(),
+      },
     },
     {
       id: '2',
@@ -47,7 +80,11 @@ export default function ClientsPage() {
       status: 'active',
       createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
       updatedAt: new Date(Date.now() - 86400000).toISOString(),
-      customFields: {},
+      customFields: {
+        company: 'Inovação Digital',
+        priority: false,
+        last_contact: new Date(Date.now() - 7 * 86400000).toISOString(),
+      },
     },
     {
       id: '3',
@@ -57,7 +94,11 @@ export default function ClientsPage() {
       status: 'inactive',
       createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
       updatedAt: new Date(Date.now() - 172800000).toISOString(),
-      customFields: {},
+      customFields: {
+        company: 'Consultoria ABC',
+        priority: false,
+        last_contact: new Date(Date.now() - 30 * 86400000).toISOString(),
+      },
     },
   ]
   
@@ -160,6 +201,25 @@ export default function ClientsPage() {
     })
     broadcastChannel.close()
   }, [databaseId])
+
+  // Client action handlers
+  const handleViewClient = useCallback((clientId: string) => {
+    // Navigate to client details page (will be implemented in next sub-stage)
+    console.log('Navigate to client details:', clientId)
+    // router.push(`/clients/${databaseId}/${clientId}`)
+  }, [databaseId])
+
+  const handleEditClient = useCallback((clientId: string) => {
+    // Navigate to client edit page (will be implemented in later sub-stages)
+    console.log('Navigate to client edit:', clientId)
+    // router.push(`/clients/${databaseId}/${clientId}/edit`)
+  }, [databaseId])
+
+  const handleDeleteClient = useCallback((clientId: string) => {
+    // Show delete confirmation (will be implemented in later sub-stages)
+    console.log('Delete client:', clientId)
+    // Show confirmation dialog and delete client
+  }, [])
 
   // Handle forced logout
   const handleForceLogout = useCallback(async () => {
@@ -339,7 +399,12 @@ export default function ClientsPage() {
           </CardHeader>
           <CardContent>
             <DataTable 
-              columns={columns} 
+              columns={createColumns(
+                mockCustomFields,
+                handleViewClient,
+                handleEditClient,
+                handleDeleteClient
+              )} 
               data={mockClients}
               searchKey="name"
               searchPlaceholder="Buscar clientes..."

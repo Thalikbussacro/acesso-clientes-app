@@ -13,6 +13,13 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react'
 
+interface CustomField {
+  id: string
+  name: string
+  type: 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean'
+  required: boolean
+}
+
 // Client type definition
 export type Client = {
   id: string
@@ -25,7 +32,14 @@ export type Client = {
   customFields: Record<string, unknown>
 }
 
-export const columns: ColumnDef<Client>[] = [
+// Function to create dynamic columns based on custom fields
+export function createColumns(
+  customFields: CustomField[] = [],
+  onViewClient?: (clientId: string) => void,
+  onEditClient?: (clientId: string) => void,
+  onDeleteClient?: (clientId: string) => void
+): ColumnDef<Client>[] {
+  const staticColumns: ColumnDef<Client>[] = [
   {
     accessorKey: 'name',
     header: 'Nome',
@@ -109,16 +123,25 @@ export const columns: ColumnDef<Client>[] = [
               Copiar ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex items-center gap-2">
+            <DropdownMenuItem 
+              className="flex items-center gap-2"
+              onClick={() => onViewClient?.(client.id)}
+            >
               <Eye className="h-4 w-4" />
               Ver detalhes
             </DropdownMenuItem>
-            <DropdownMenuItem className="flex items-center gap-2">
+            <DropdownMenuItem 
+              className="flex items-center gap-2"
+              onClick={() => onEditClient?.(client.id)}
+            >
               <Edit className="h-4 w-4" />
               Editar
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="flex items-center gap-2 text-red-600">
+            <DropdownMenuItem 
+              className="flex items-center gap-2 text-red-600"
+              onClick={() => onDeleteClient?.(client.id)}
+            >
               <Trash2 className="h-4 w-4" />
               Excluir
             </DropdownMenuItem>
@@ -126,5 +149,62 @@ export const columns: ColumnDef<Client>[] = [
         </DropdownMenu>
       )
     },
-  },
-]
+  }]
+
+  // Generate dynamic columns for custom fields
+  const dynamicColumns: ColumnDef<Client>[] = customFields.map((field) => ({
+    accessorKey: `customFields.${field.id}`,
+    header: field.name,
+    cell: ({ row }) => {
+      const value = row.original.customFields[field.id]
+      
+      if (value === null || value === undefined || value === '') {
+        return <span className="text-gray-400">—</span>
+      }
+
+      switch (field.type) {
+        case 'boolean':
+          return (
+            <Badge variant={value ? 'default' : 'secondary'}>
+              {value ? 'Sim' : 'Não'}
+            </Badge>
+          )
+        case 'date':
+          const date = new Date(value as string)
+          return (
+            <span className="text-sm">
+              {date.toLocaleDateString('pt-BR')}
+            </span>
+          )
+        case 'email':
+          return (
+            <a 
+              href={`mailto:${value}`}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              {value as string}
+            </a>
+          )
+        case 'phone':
+          const phone = value as string
+          return (
+            <a 
+              href={`tel:${phone.replace(/\D/g, '')}`}
+              className="text-blue-600 hover:underline text-sm"
+            >
+              {phone}
+            </a>
+          )
+        default:
+          return <span className="text-sm">{String(value)}</span>
+      }
+    },
+  }))
+
+  // Insert dynamic columns before the actions column
+  const actionsColumn = staticColumns.pop()! // Remove actions column
+  return [...staticColumns, ...dynamicColumns, actionsColumn]
+}
+
+// Default columns for backward compatibility
+export const columns = createColumns()
