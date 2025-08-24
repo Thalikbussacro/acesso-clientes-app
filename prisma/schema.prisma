@@ -14,3 +14,112 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
+
+// Users table - authentication system
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  password_hash String
+  created_at   DateTime @default(now())
+  
+  // Relations
+  client_databases ClientDatabase[]
+  access_details   AccessDetail[]
+  access_history   AccessDetailHistory[]
+  
+  @@map("users")
+}
+
+// Client databases - separate password-protected databases
+model ClientDatabase {
+  id              String   @id @default(uuid())
+  name            String
+  password_hash   String
+  timeout_minutes Int      @default(30)
+  custom_fields   Json     @default("{}")
+  user_id         String
+  created_at      DateTime @default(now())
+  
+  // Relations
+  user    User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  clients Client[]
+  
+  @@map("client_databases")
+}
+
+// Clients - individual client records within a database
+model Client {
+  id           String    @id @default(uuid())
+  name         String
+  database_id  String
+  custom_data  Json      @default("{}")
+  last_access  DateTime?
+  created_at   DateTime  @default(now())
+  
+  // Relations
+  database      ClientDatabase @relation(fields: [database_id], references: [id], onDelete: Cascade)
+  access_points AccessPoint[]
+  
+  @@map("clients")
+}
+
+// Access points - different access methods for each client
+model AccessPoint {
+  id         String   @id @default(uuid())
+  client_id  String
+  name       String
+  created_at DateTime @default(now())
+  
+  // Relations
+  client         Client        @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  access_details AccessDetail?
+  access_images  AccessImage[]
+  
+  @@map("access_points")
+}
+
+// Access details - rich text content for each access point
+model AccessDetail {
+  id               String   @id @default(uuid())
+  access_point_id  String   @unique
+  content          String   @default("")
+  last_edited_by   String
+  last_edited_at   DateTime @default(now())
+  
+  // Relations
+  access_point AccessPoint @relation(fields: [access_point_id], references: [id], onDelete: Cascade)
+  last_editor  User        @relation(fields: [last_edited_by], references: [id])
+  
+  @@map("access_details")
+}
+
+// Access images - base64 images for each access point
+model AccessImage {
+  id              String   @id @default(uuid())
+  access_point_id String
+  filename        String
+  image_data      String   // Base64 encoded image
+  mime_type       String
+  created_at      DateTime @default(now())
+  
+  // Relations
+  access_point AccessPoint @relation(fields: [access_point_id], references: [id], onDelete: Cascade)
+  
+  @@map("access_images")
+}
+
+// Access details history - audit trail for content changes
+model AccessDetailHistory {
+  id               String   @id @default(uuid())
+  access_point_id  String
+  version          Int
+  content          String
+  edited_by        String
+  edited_at        DateTime @default(now())
+  
+  // Relations
+  editor User @relation(fields: [edited_by], references: [id])
+  
+  @@unique([access_point_id, version])
+  @@map("access_details_history")
+}
