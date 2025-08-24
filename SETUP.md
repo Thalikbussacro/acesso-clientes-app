@@ -144,12 +144,12 @@ feat(2.3): implement login page with form validation
 - [x] **COMMIT: `feat(2.3): implement login page with form validation`**
 
 ### 2.4 Authentication API
-- [ ] Create `/src/app/api/auth/login/route.ts` for login endpoint
-- [ ] Implement user authentication logic
-- [ ] Return JWT token on successful login
-- [ ] Handle authentication errors
-- [ ] Create `/src/app/api/auth/logout/route.ts` for logout endpoint
-- [ ] **COMMIT: `feat(2.4): create authentication API endpoints`**
+- [x] Create `/src/app/api/auth/login/route.ts` for login endpoint
+- [x] Implement user authentication logic
+- [x] Return JWT token on successful login
+- [x] Handle authentication errors
+- [x] Create `/src/app/api/auth/logout/route.ts` for logout endpoint
+- [x] **COMMIT: `feat(2.4): create authentication API endpoints`**
 
 ### 2.5 Middleware Setup
 - [ ] Create `/src/middleware.ts` for route protection
