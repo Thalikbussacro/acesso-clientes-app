@@ -4,10 +4,43 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { Search, Plus, Database, Users, Clock } from 'lucide-react'
+
+// Mock data for development - will be replaced with API calls in stage 3.4
+const mockDatabases = [
+  {
+    id: '1',
+    name: 'Base Principal',
+    clientCount: 45,
+    lastModified: '2024-01-20T10:30:00Z',
+    customFieldsCount: 5,
+    status: 'active'
+  },
+  {
+    id: '2', 
+    name: 'Clientes Especiais',
+    clientCount: 12,
+    lastModified: '2024-01-19T15:45:00Z',
+    customFieldsCount: 3,
+    status: 'active'
+  },
+  {
+    id: '3',
+    name: 'Base Teste',
+    clientCount: 3,
+    lastModified: '2024-01-18T09:20:00Z',
+    customFieldsCount: 2,
+    status: 'inactive'
+  }
+]
 
 export default function DatabasesPage() {
   const [isLoading, setIsLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [filteredDatabases, setFilteredDatabases] = useState(mockDatabases)
   const router = useRouter()
 
   useEffect(() => {
@@ -19,6 +52,37 @@ export default function DatabasesPage() {
     }
     setIsLoading(false)
   }, [router])
+
+  // Filter databases based on search term
+  useEffect(() => {
+    const filtered = mockDatabases.filter(db => 
+      db.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    setFilteredDatabases(filtered)
+  }, [searchTerm])
+
+  const handleDatabaseClick = (databaseId: string) => {
+    // Navigate to database password validation page (will be implemented in stage 4.2)
+    router.push(`/databases/${databaseId}`)
+  }
+
+  const handleAddDatabase = () => {
+    // Open database creation dialog (will be implemented in stage 3.3)
+    console.log('Add database clicked - dialog will be implemented in stage 3.3')
+  }
+
+  const formatLastModified = (date: string) => {
+    const now = new Date()
+    const modified = new Date(date)
+    const diffInHours = Math.floor((now.getTime() - modified.getTime()) / (1000 * 60 * 60))
+    
+    if (diffInHours < 24) {
+      return `há ${diffInHours} horas`
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24)
+      return `há ${diffInDays} dias`
+    }
+  }
 
   const handleLogout = () => {
     removeAuthToken()
@@ -38,7 +102,8 @@ export default function DatabasesPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex justify-between items-center">
+        {/* Header */}
+        <div className="mb-8 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Bases de Dados dos Clientes</h1>
             <p className="text-gray-600 mt-2">
@@ -50,38 +115,82 @@ export default function DatabasesPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="border-dashed border-2 border-gray-300 hover:border-gray-400 transition-colors">
-            <CardHeader className="text-center">
-              <CardTitle className="text-lg text-gray-600">
-                + Nova Base de Dados
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center">
-              <p className="text-sm text-gray-500 mb-4">
-                Crie uma nova base de dados para organizar os clientes
-              </p>
-              <Button className="w-full">
-                Criar Base de Dados
-              </Button>
-            </CardContent>
-          </Card>
+        {/* Search and Filters */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Buscar bases de dados..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Button onClick={handleAddDatabase} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Nova Base de Dados
+          </Button>
+        </div>
 
-          {/* Placeholder for existing databases */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Base Demo</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-gray-600 mb-4">
-                Base de dados de exemplo para testes
+        {/* Results Summary */}
+        <div className="mb-4">
+          <p className="text-sm text-gray-600">
+            {filteredDatabases.length} base{filteredDatabases.length !== 1 ? 's' : ''} encontrada{filteredDatabases.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {/* Database Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredDatabases.map((database) => (
+            <Card 
+              key={database.id}
+              className="cursor-pointer hover:shadow-lg transition-shadow duration-200 border-l-4 border-l-blue-500"
+              onClick={() => handleDatabaseClick(database.id)}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <Database className="h-5 w-5 text-blue-600" />
+                    <CardTitle className="text-lg truncate">{database.name}</CardTitle>
+                  </div>
+                  <Badge variant={database.status === 'active' ? 'default' : 'secondary'}>
+                    {database.status === 'active' ? 'Ativa' : 'Inativa'}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* Client Count */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Users className="h-4 w-4" />
+                  <span>{database.clientCount} cliente{database.clientCount !== 1 ? 's' : ''}</span>
+                </div>
+                
+                {/* Custom Fields Count */}
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    {database.customFieldsCount} campo{database.customFieldsCount !== 1 ? 's' : ''} personalizado{database.customFieldsCount !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                
+                {/* Last Modified */}
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Clock className="h-4 w-4" />
+                  <span>Atualizada {formatLastModified(database.lastModified)}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          
+          {/* No results message */}
+          {filteredDatabases.length === 0 && searchTerm && (
+            <div className="col-span-full text-center py-12">
+              <Database className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg mb-2">Nenhuma base de dados encontrada</p>
+              <p className="text-gray-400 text-sm">
+                Tente ajustar o termo de busca ou criar uma nova base de dados
               </p>
-              <div className="flex items-center justify-between text-sm text-gray-500">
-                <span>15 clientes</span>
-                <span>Atualizada há 2 horas</span>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>
