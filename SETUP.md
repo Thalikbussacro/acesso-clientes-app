@@ -246,21 +246,21 @@ feat(2.3): implement login page with form validation
 
 ## Stage 5: Client Management
 
-### 5.1 Data Table Setup
-- [ ] Add data-table component: `npx shadcn-ui@latest add data-table`
-- [ ] Create `/src/components/clients-table.tsx`
-- [ ] Configure TanStack Table with basic columns
-- [ ] Implement sorting functionality
-- [ ] Add search/filter input field
-- [ ] **COMMIT: `feat(5.1): setup data table component with TanStack Table`**
+### 5.1 Data Table Setup ✅
+- [x] Add data-table component: `npx shadcn-ui@latest add data-table`
+- [x] Create `/src/components/clients-table.tsx`
+- [x] Configure TanStack Table with basic columns
+- [x] Implement sorting functionality
+- [x] Add search/filter input field
+- [x] **COMMIT: `feat(5.1): setup data table component with TanStack Table`**
 
-### 5.2 Client List Page
-- [ ] Create `/src/app/clients/[databaseId]/page.tsx`
-- [ ] Display database name and metadata in header
-- [ ] Render clients table with static columns
-- [ ] Add dynamic columns based on custom fields
-- [ ] Implement client selection → navigate to details
-- [ ] **COMMIT: `feat(5.2): create client list page with dynamic columns`**
+### 5.2 Client List Page ✅
+- [x] Create `/src/app/clients/[databaseId]/page.tsx`
+- [x] Display database name and metadata in header
+- [x] Render clients table with static columns
+- [x] Add dynamic columns based on custom fields
+- [x] Implement client selection → navigate to details
+- [x] **COMMIT: `feat(5.2): create client list page with dynamic columns`**
 
 ### 5.3 Client Management API
 - [ ] Create `/src/app/api/clients/route.ts`
