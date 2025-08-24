@@ -21,6 +21,7 @@ import {
   CheckCircle,
   XCircle 
 } from 'lucide-react'
+import { performFullLogoutCleanup } from '@/lib/session-cleanup'
 
 interface SessionRevalidationModalProps {
   isOpen: boolean
@@ -93,17 +94,22 @@ export function SessionRevalidationModal({
   }, [isOpen])
 
   // Handle timeout (60 seconds elapsed)
-  const handleTimeout = useCallback(() => {
+  const handleTimeout = useCallback(async () => {
     setIsExpired(true)
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current)
       countdownIntervalRef.current = null
     }
     
-    // Force logout after a short delay to show the expired message
-    setTimeout(() => {
+    // Perform full logout cleanup
+    try {
+      await performFullLogoutCleanup()
+      console.log('Timeout cleanup completed successfully')
+    } catch (error) {
+      console.error('Error during timeout cleanup:', error)
+      // Still proceed with logout even if cleanup fails
       onForceLogout()
-    }, 2000)
+    }
   }, [onForceLogout])
 
   // Handle password validation and session renewal

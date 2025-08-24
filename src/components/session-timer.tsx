@@ -6,6 +6,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { Clock, AlertTriangle, RefreshCw, LogOut } from 'lucide-react'
+import { 
+  cleanupDatabaseSession, 
+  setupUnloadCleanup 
+} from '@/lib/session-cleanup'
 
 interface SessionData {
   databaseId: string
@@ -82,13 +86,17 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
   }, [databaseId])
   
   // Handle session expiry
-  const handleSessionExpiry = useCallback(() => {
+  const handleSessionExpiry = useCallback(async () => {
     setIsExpired(true)
     setTimeRemaining(0)
     
-    // Clean up session data
-    const sessionKey = `db_session_${databaseId}`
-    localStorage.removeItem(sessionKey)
+    // Perform comprehensive session cleanup
+    try {
+      await cleanupDatabaseSession(databaseId)
+      console.log('Database session cleaned up successfully')
+    } catch (error) {
+      console.error('Error during session cleanup:', error)
+    }
     
     // Broadcast expiry to other tabs
     broadcastRef.current?.postMessage({
@@ -101,10 +109,14 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
   }, [databaseId, onSessionExpired])
 
   // Handle manual logout
-  const handleLogout = useCallback(() => {
-    // Clean up session data
-    const sessionKey = `db_session_${databaseId}`
-    localStorage.removeItem(sessionKey)
+  const handleLogout = useCallback(async () => {
+    // Perform comprehensive session cleanup
+    try {
+      await cleanupDatabaseSession(databaseId)
+      console.log('Manual logout cleanup completed successfully')
+    } catch (error) {
+      console.error('Error during logout cleanup:', error)
+    }
     
     // Broadcast logout to other tabs
     broadcastRef.current?.postMessage({
@@ -238,6 +250,9 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
     // Load initial session data
     loadSessionData()
     
+    // Setup cleanup on page unload
+    const cleanupUnloadListeners = setupUnloadCleanup(databaseId)
+    
     // Set up timer interval
     intervalRef.current = setInterval(() => {
       const sessionKey = `db_session_${databaseId}`
@@ -279,6 +294,8 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
       if (channel) {
         channel.close()
       }
+      // Clean up unload listeners
+      cleanupUnloadListeners()
     }
   }, [databaseId, initializeBroadcast, loadSessionData, handleSessionExpiry, onRevalidationNeeded])
 

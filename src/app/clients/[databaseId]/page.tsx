@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { SessionTimer } from '@/components/session-timer'
 import { SessionRevalidationModal } from '@/components/session-revalidation-modal'
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { Database, Users, Plus, ArrowLeft } from 'lucide-react'
 
 interface DatabaseInfo {
@@ -125,13 +126,17 @@ export default function ClientsPage() {
   }, [databaseId])
 
   // Handle forced logout
-  const handleForceLogout = useCallback(() => {
+  const handleForceLogout = useCallback(async () => {
     setHasValidSession(false)
     setShowRevalidationModal(false)
     
-    // Clean up session data
-    const sessionKey = `db_session_${databaseId}`
-    localStorage.removeItem(sessionKey)
+    // Perform comprehensive cleanup
+    try {
+      await cleanupDatabaseSession(databaseId)
+      console.log('Force logout cleanup completed successfully')
+    } catch (error) {
+      console.error('Error during force logout cleanup:', error)
+    }
     
     // Redirect to databases page
     router.push('/databases')
