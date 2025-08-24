@@ -152,12 +152,12 @@ feat(2.3): implement login page with form validation
 - [x] **COMMIT: `feat(2.4): create authentication API endpoints`**
 
 ### 2.5 Middleware Setup
-- [ ] Create `/src/middleware.ts` for route protection
-- [ ] Implement JWT token validation
-- [ ] Redirect unauthenticated users to login
-- [ ] Allow public access to login page only
-- [ ] Test middleware with protected routes
-- [ ] **COMMIT: `feat(2.5): implement authentication middleware and route protection`**
+- [x] Create `/src/middleware.ts` for route protection
+- [x] Implement JWT token validation
+- [x] Redirect unauthenticated users to login
+- [x] Allow public access to login page only
+- [x] Test middleware with protected routes
+- [x] **COMMIT: `feat(2.5): implement authentication middleware and route protection`**
 
 ## Stage 3: Client Database Management
 
