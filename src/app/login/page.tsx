@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { setAuthToken } from '@/lib/auth-client'
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Nome de usuário é obrigatório'),
@@ -18,10 +19,11 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-export default function LoginPage() {
+function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -51,11 +53,12 @@ export default function LoginPage() {
         return
       }
 
-      // Store token in localStorage for now (will be improved with cookies later)
-      localStorage.setItem('token', result.token)
+      // Store token in localStorage and cookies
+      setAuthToken(result.token)
       
-      // Redirect to databases page
-      router.push('/databases')
+      // Redirect to intended page or databases page
+      const redirectTo = searchParams.get('redirect') || '/databases'
+      router.push(redirectTo)
     } catch {
       setError('Erro de conexão. Tente novamente.')
     } finally {
@@ -147,5 +150,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-lg">Carregando...</p>
+        </div>
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }
