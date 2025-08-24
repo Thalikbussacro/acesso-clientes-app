@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { DatabaseCreationDialog } from '@/components/database-creation-dialog'
 import { Search, Plus, Database, Users, Clock } from 'lucide-react'
 
 // Mock data for development - will be replaced with API calls in stage 3.4
@@ -66,9 +67,11 @@ export default function DatabasesPage() {
     router.push(`/databases/${databaseId}`)
   }
 
-  const handleAddDatabase = () => {
-    // Open database creation dialog (will be implemented in stage 3.3)
-    console.log('Add database clicked - dialog will be implemented in stage 3.3')
+  const handleDatabaseCreation = (data: unknown) => {
+    // This will be connected to API in stage 3.4
+    console.log('Creating database with data:', data)
+    // For now, just add to mock data (will be replaced with API call)
+    // In production, this would trigger a refresh of the databases list
   }
 
   const formatLastModified = (date: string) => {
@@ -126,10 +129,15 @@ export default function DatabasesPage() {
               className="pl-10"
             />
           </div>
-          <Button onClick={handleAddDatabase} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nova Base de Dados
-          </Button>
+          <DatabaseCreationDialog
+            onSubmit={handleDatabaseCreation}
+            trigger={
+              <Button className="gap-2">
+                <Plus className="h-4 w-4" />
+                Nova Base de Dados
+              </Button>
+            }
+          />
         </div>
 
         {/* Results Summary */}
