@@ -162,11 +162,11 @@ feat(2.3): implement login page with form validation
 ## Stage 3: Client Database Management
 
 ### 3.1 Additional shadcn/ui Components
-- [ ] Add dialog component: `npx shadcn-ui@latest add dialog`
-- [ ] Add separator component: `npx shadcn-ui@latest add separator`
-- [ ] Add badge component: `npx shadcn-ui@latest add badge`
-- [ ] Add progress component: `npx shadcn-ui@latest add progress`
-- [ ] **COMMIT: `feat(3.1): add additional shadcn/ui components for database management`**
+- [x] Add dialog component: `npx shadcn@latest add dialog`
+- [x] Add separator component: `npx shadcn@latest add separator`
+- [x] Add badge component: `npx shadcn@latest add badge`
+- [x] Add progress component: `npx shadcn@latest add progress`
+- [x] **COMMIT: `feat(3.1): add additional shadcn/ui components for database management`**
 
 ### 3.2 Client Databases Page
 - [ ] Create `/src/app/databases/page.tsx` layout
