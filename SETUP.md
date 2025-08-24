@@ -109,13 +109,13 @@ feat(2.3): implement login page with form validation
 - [x] **COMMIT: `feat(1.3): create complete database schema and run migrations`**
 
 ### 1.4 Essential Dependencies
-- [ ] Install authentication: `npm install jsonwebtoken bcryptjs @types/jsonwebtoken @types/bcryptjs`
-- [ ] Install form handling: `npm install react-hook-form zod @hookform/resolvers`
-- [ ] Install table: `npm install @tanstack/react-table`
-- [ ] Install Quill.js: `npm install quill @types/quill`
-- [ ] Install date handling: `npm install date-fns`
-- [ ] Install UUID: `npm install uuid @types/uuid`
-- [ ] **COMMIT: `feat(1.4): install all essential dependencies`**
+- [x] Install authentication: `npm install jsonwebtoken bcryptjs @types/jsonwebtoken @types/bcryptjs`
+- [x] Install form handling: `npm install react-hook-form zod @hookform/resolvers`
+- [x] Install table: `npm install @tanstack/react-table`
+- [x] Install Quill.js: `npm install quill @types/quill`
+- [x] Install date handling: `npm install date-fns`
+- [x] Install UUID: `npm install uuid @types/uuid`
+- [x] **COMMIT: `feat(1.4): install all essential dependencies`**
 
 ## Stage 2: Authentication System
 
