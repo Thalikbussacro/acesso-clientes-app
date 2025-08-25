@@ -21,7 +21,7 @@ interface CleanupResult {
 }
 
 /**
- * Clear all Quill editor instances and their content
+ * Clear all Quill editor instances and their content with security sanitization
  */
 function clearQuillEditors(): string[] {
   const clearedItems: string[] = []
@@ -31,11 +31,37 @@ function clearQuillEditors(): string[] {
     const quillContainers = document.querySelectorAll('.ql-editor, .ql-container')
     
     quillContainers.forEach((container, index) => {
-      // Clear editor content
+      // Clear editor content securely
       if (container instanceof HTMLElement) {
-        container.innerHTML = ''
-        container.textContent = ''
+        // Overwrite content multiple times for security
+        for (let i = 0; i < 3; i++) {
+          container.innerHTML = ''
+          container.textContent = ''
+        }
+        
+        // Remove any data attributes that might contain sensitive info
+        const attributes = Array.from(container.attributes)
+        attributes.forEach(attr => {
+          if (attr.name.startsWith('data-') && 
+              !attr.name.startsWith('data-preserve')) {
+            container.removeAttribute(attr.name)
+          }
+        })
+        
         clearedItems.push(`quill-editor-${index}`)
+      }
+    })
+
+    // Clear rich editor specific elements
+    const richEditors = document.querySelectorAll('.rich-editor')
+    richEditors.forEach((editor, index) => {
+      if (editor instanceof HTMLElement) {
+        // Secure content clearing
+        for (let i = 0; i < 3; i++) {
+          editor.innerHTML = ''
+          editor.textContent = ''
+        }
+        clearedItems.push(`rich-editor-${index}`)
       }
     })
 
@@ -45,8 +71,45 @@ function clearQuillEditors(): string[] {
       const windowObj = window as any
       if (windowObj.Quill) {
         // Clear any registered Quill instances
+        delete windowObj.Quill
         clearedItems.push('quill-global-instances')
       }
+      
+      // Clear DOMPurify cache if it exists
+      if (windowObj.DOMPurify) {
+        try {
+          // Clear DOMPurify configuration cache
+          windowObj.DOMPurify.removeAllHooks()
+          clearedItems.push('dompurify-cache')
+        } catch (error) {
+          // DOMPurify doesn't have removeAllHooks in all versions
+          console.debug('DOMPurify cache clear skipped:', error)
+        }
+      }
+    }
+
+    // Clear any content drafts or temporary content from localStorage
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const contentKeys: string[] = []
+      
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && (key.includes('quill') || 
+                   key.includes('editor') || 
+                   key.includes('content') ||
+                   key.includes('draft'))) {
+          contentKeys.push(key)
+        }
+      }
+      
+      contentKeys.forEach(key => {
+        // Overwrite content multiple times before removal
+        const placeholder = '0'.repeat(100)
+        localStorage.setItem(key, placeholder)
+        localStorage.setItem(key, '')
+        localStorage.removeItem(key)
+        clearedItems.push(`content-draft-${key}`)
+      })
     }
 
   } catch (error) {

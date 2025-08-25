@@ -21,8 +21,10 @@ import {
   Eye, 
   AlertCircle,
   Clock,
-  User
+  User,
+  Shield
 } from 'lucide-react'
+import { sanitizeContent, getContentStats, CONTENT_LIMITS } from '@/lib/content-security'
 
 // Quill types (using actual Quill interface)
 interface QuillInstance {
@@ -77,11 +79,11 @@ export function RichEditor({
   const [currentContent, setCurrentContent] = useState(content)
   const [originalContent, setOriginalContent] = useState(content)
   const [isLoading, setIsLoading] = useState(true)
-  const [wordCount, setWordCount] = useState(0)
-  const [characterCount, setCharacterCount] = useState(0)
+  const [contentStats, setContentStats] = useState(() => getContentStats(content))
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved')
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+  const [contentErrors, setContentErrors] = useState<string[]>([])
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Quill configuration
@@ -145,17 +147,36 @@ export function RichEditor({
         // Set up change handler
         const handleTextChange = () => {
           const htmlContent = quill.root.innerHTML
-          const textContent = quill.getText()
           
-          setCurrentContent(htmlContent)
-          setHasChanges(htmlContent !== originalContent)
-          setWordCount(textContent.trim().split(/\s+/).filter(word => word.length > 0).length)
-          setCharacterCount(textContent.length)
+          // Sanitize content for security
+          const sanitizedContent = sanitizeContent(htmlContent)
           
-          onChange?.(htmlContent)
+          // Update content stats
+          const stats = getContentStats(sanitizedContent)
+          setContentStats(stats)
           
-          // Handle auto-save
-          if (autoSave && isEditing && !readOnly) {
+          // Check for content limit violations
+          const errors: string[] = []
+          if (!stats.isWithinLimits) {
+            if (sanitizedContent.length > CONTENT_LIMITS.MAX_LENGTH) {
+              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_LENGTH} caracteres`)
+            }
+            if (stats.wordCount > CONTENT_LIMITS.MAX_WORD_COUNT) {
+              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_WORD_COUNT} palavras`)
+            }
+            if (stats.paragraphCount > CONTENT_LIMITS.MAX_PARAGRAPH_COUNT) {
+              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_PARAGRAPH_COUNT} parágrafos`)
+            }
+          }
+          setContentErrors(errors)
+          
+          setCurrentContent(sanitizedContent)
+          setHasChanges(sanitizedContent !== originalContent)
+          
+          onChange?.(sanitizedContent)
+          
+          // Handle auto-save (only if content is valid)
+          if (autoSave && isEditing && !readOnly && errors.length === 0) {
             setAutoSaveStatus('unsaved')
             
             // Clear existing timeout
@@ -165,7 +186,7 @@ export function RichEditor({
             
             // Set new timeout
             autoSaveTimeoutRef.current = setTimeout(() => {
-              handleAutoSave(htmlContent)
+              handleAutoSave(sanitizedContent)
             }, autoSaveDelay)
           }
         }
@@ -173,9 +194,9 @@ export function RichEditor({
         quill.on('text-change', handleTextChange)
 
         // Initial stats calculation
-        const initialText = quill.getText()
-        setWordCount(initialText.trim().split(/\s+/).filter(word => word.length > 0).length)
-        setCharacterCount(initialText.length)
+        const initialContent = content || ''
+        const initialStats = getContentStats(initialContent)
+        setContentStats(initialStats)
 
         setIsLoading(false)
       } catch (error) {
@@ -406,7 +427,7 @@ export function RichEditor({
                     <Button 
                       onClick={handleSave} 
                       size="sm"
-                      disabled={!hasChanges}
+                      disabled={!hasChanges || contentErrors.length > 0}
                     >
                       <Save className="h-4 w-4 mr-2" />
                       Salvar
@@ -421,8 +442,23 @@ export function RichEditor({
         {/* Metadata */}
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div className="flex items-center gap-4">
-            <span>{wordCount} palavras</span>
-            <span>{characterCount} caracteres</span>
+            <span className={contentStats.wordCount > CONTENT_LIMITS.MAX_WORD_COUNT ? 'text-red-600' : ''}>
+              {contentStats.wordCount} palavras
+            </span>
+            <span className={contentStats.characterCount > CONTENT_LIMITS.MAX_LENGTH ? 'text-red-600' : ''}>
+              {contentStats.characterCount} caracteres
+            </span>
+            {contentStats.paragraphCount > 0 && (
+              <span className={contentStats.paragraphCount > CONTENT_LIMITS.MAX_PARAGRAPH_COUNT ? 'text-red-600' : ''}>
+                {contentStats.paragraphCount} parágrafos
+              </span>
+            )}
+            {!contentStats.isWithinLimits && (
+              <Badge variant="destructive" className="ml-2">
+                <Shield className="h-3 w-3 mr-1" />
+                Limite excedido
+              </Badge>
+            )}
           </div>
           {formatLastEdited() && (
             <div className="flex items-center gap-1">
@@ -434,6 +470,23 @@ export function RichEditor({
       </CardHeader>
       
       <CardContent>
+        {/* Content Errors */}
+        {contentErrors.length > 0 && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <span className="text-sm font-medium text-red-800">
+                Erros de Validação de Conteúdo
+              </span>
+            </div>
+            <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+              {contentErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        
         <div className="relative">
           {/* Quill Editor */}
           <div 

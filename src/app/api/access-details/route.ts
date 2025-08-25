@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyJWT } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { z } from 'zod'
+import { sanitizeContent, validateContentStructure, contentValidationSchema } from '@/lib/content-security'
 
 // Validation schemas
 const getAccessDetailsSchema = z.object({
@@ -10,7 +11,7 @@ const getAccessDetailsSchema = z.object({
 
 const saveAccessDetailsSchema = z.object({
   access_point_id: z.string().uuid(),
-  content: z.string(),
+  content: contentValidationSchema.shape.content,
 })
 
 // GET /api/access-details - Get content for an access point
@@ -101,7 +102,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { access_point_id, content } = saveAccessDetailsSchema.parse(body)
+    const { access_point_id, content: rawContent } = saveAccessDetailsSchema.parse(body)
+
+    // Additional content security validation
+    const contentValidation = validateContentStructure(rawContent)
+    if (!contentValidation.isValid) {
+      return NextResponse.json({ 
+        error: 'Invalid content', 
+        details: contentValidation.errors 
+      }, { status: 400 })
+    }
+
+    // Sanitize content to prevent XSS
+    const content = sanitizeContent(rawContent)
 
     // Verify access point exists and user has access
     const accessPoint = await db.accessPoint.findFirst({
