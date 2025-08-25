@@ -51,6 +51,7 @@ export function createColumns(
         </div>
       )
     },
+    filterFn: 'includesString',
   },
   {
     accessorKey: 'email',
@@ -198,6 +199,21 @@ export function createColumns(
         default:
           return <span className="text-sm">{String(value)}</span>
       }
+    },
+    filterFn: (row, columnId, filterValue) => {
+      const value = row.original.customFields[field.id]
+      
+      if (!filterValue || filterValue === 'all') return true
+      
+      if (value === null || value === undefined || value === '') {
+        return false
+      }
+      
+      if (field.type === 'boolean') {
+        return String(value) === filterValue
+      }
+      
+      return String(value).toLowerCase().includes(filterValue.toLowerCase())
     },
   }))
 

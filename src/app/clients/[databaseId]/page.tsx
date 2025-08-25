@@ -460,8 +460,8 @@ export default function ClientsPage() {
                   handleDeleteClient
                 )} 
                 data={clients}
-                searchKey="name"
-                searchPlaceholder="Buscar clientes..."
+                customFields={mockCustomFields}
+                enableCustomFieldFiltering={true}
               />
             )}
           </CardContent>
