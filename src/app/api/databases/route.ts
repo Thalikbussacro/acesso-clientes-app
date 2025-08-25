@@ -50,22 +50,25 @@ const updateDatabaseSchema = z.object({
   custom_fields: z.array(customFieldSchema).optional(),
 })
 
-// Helper function to get user from JWT token
-async function getUserFromToken(request: NextRequest) {
+// Helper function to get user from middleware headers
+async function getUserFromMiddleware(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value
-    if (!token) {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id')
+    const username = request.headers.get('x-username')
+    
+    if (!userId || !username) {
+      console.log('[API] No user info from middleware')
       return null
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET!) as { userId: string }
     const user = await db.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: userId },
     })
 
     return user
   } catch (error) {
-    console.error('Error verifying token:', error)
+    console.error('Error getting user from middleware:', error)
     return null
   }
 }
@@ -85,7 +88,7 @@ async function checkDuplicateName(name: string, userId: string, excludeId?: stri
 // GET /api/databases - List user's databases
 export async function GET(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -134,7 +137,7 @@ export async function GET(request: NextRequest) {
 // POST /api/databases - Create new database
 export async function POST(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -232,7 +235,7 @@ export async function POST(request: NextRequest) {
 // PUT /api/databases - Update database (requires database ID in query params)
 export async function PUT(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -359,7 +362,7 @@ export async function PUT(request: NextRequest) {
 // DELETE /api/databases - Delete database (requires database ID in query params)
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

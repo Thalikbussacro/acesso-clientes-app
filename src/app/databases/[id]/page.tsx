@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { removeAuthToken, getAuthToken, getAuthHeaders } from '@/lib/auth-client'
 import { Database, Lock, Users, Clock, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 
 interface DatabaseInfo {
@@ -34,7 +34,9 @@ export default function DatabaseAccessPage() {
   // Fetch database info
   const fetchDatabaseInfo = useCallback(async () => {
     try {
-      const response = await fetch('/api/databases')
+      const response = await fetch('/api/databases', {
+        headers: getAuthHeaders(),
+      })
       if (response.ok) {
         const data = await response.json()
         const dbInfo = data.databases.find((db: DatabaseInfo) => db.id === databaseId)
@@ -94,6 +96,7 @@ export default function DatabaseAccessPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
         body: JSON.stringify({ password }),
       })
@@ -102,10 +105,13 @@ export default function DatabaseAccessPage() {
         const data = await response.json()
         
         // Store session info in localStorage
+        const sessionStart = Date.now()
+        const timeoutMinutes = database?.timeoutMinutes || 30
         const sessionData = {
           databaseId,
-          sessionStart: Date.now(),
-          timeoutMinutes: database?.timeoutMinutes || 30,
+          sessionStart,
+          timeoutMinutes,
+          expiresAt: sessionStart + (timeoutMinutes * 60 * 1000),
           sessionToken: data.sessionToken
         }
         localStorage.setItem(`db_session_${databaseId}`, JSON.stringify(sessionData))

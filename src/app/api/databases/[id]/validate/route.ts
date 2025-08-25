@@ -9,22 +9,25 @@ const validatePasswordSchema = z.object({
   password: z.string().min(1, 'Senha é obrigatória'),
 })
 
-// Helper function to get user from JWT token
-async function getUserFromToken(request: NextRequest) {
+// Helper function to get user from middleware headers
+async function getUserFromMiddleware(request: NextRequest) {
   try {
-    const token = request.cookies.get('auth-token')?.value
-    if (!token) {
+    // Get user info from middleware headers
+    const userId = request.headers.get('x-user-id')
+    const username = request.headers.get('x-username')
+    
+    if (!userId || !username) {
+      console.log('[API] No user info from middleware')
       return null
     }
 
-    const decoded = verify(token, process.env.JWT_SECRET!) as { userId: string }
     const user = await db.user.findUnique({
-      where: { id: decoded.userId },
+      where: { id: userId },
     })
 
     return user
   } catch (error) {
-    console.error('Error verifying token:', error)
+    console.error('Error getting user from middleware:', error)
     return null
   }
 }
@@ -50,7 +53,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -146,7 +149,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getUserFromToken(request)
+    const user = await getUserFromMiddleware(request)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },

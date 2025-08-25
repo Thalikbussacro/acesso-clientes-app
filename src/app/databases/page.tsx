@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { removeAuthToken, getAuthToken, getAuthHeaders } from '@/lib/auth-client'
 import { DatabaseCreationDialog } from '@/components/database-creation-dialog'
 import { Search, Plus, Database, Users, Clock } from 'lucide-react'
 
@@ -33,7 +33,9 @@ export default function DatabasesPage() {
   // Fetch databases from API
   const fetchDatabases = useCallback(async () => {
     try {
-      const response = await fetch('/api/databases')
+      const response = await fetch('/api/databases', {
+        headers: getAuthHeaders(),
+      })
       if (response.ok) {
         const data = await response.json()
         setDatabases(data.databases)
@@ -81,12 +83,21 @@ export default function DatabasesPage() {
     customFields: unknown[]
   }) => {
     try {
+      // Convert camelCase to snake_case for API
+      const apiData = {
+        name: data.name,
+        password: data.password,
+        timeout_minutes: data.timeoutMinutes,
+        custom_fields: data.customFields,
+      }
+      
       const response = await fetch('/api/databases', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...getAuthHeaders(),
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(apiData),
       })
 
       if (response.ok) {
