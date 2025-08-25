@@ -13,44 +13,52 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { setAuthToken } from '@/lib/auth-client'
 
-const loginSchema = z.object({
-  username: z.string().min(1, 'Nome de usuário é obrigatório'),
-  password: z.string().min(1, 'Senha é obrigatória'),
+const registerSchema = z.object({
+  username: z.string().min(3, 'Nome de usuário deve ter pelo menos 3 caracteres'),
+  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'Senhas não coincidem',
+  path: ['confirmPassword'],
 })
 
-type LoginFormValues = z.infer<typeof loginSchema>
+type RegisterFormValues = z.infer<typeof registerSchema>
 
-function LoginForm() {
+function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const form = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
     defaultValues: {
       username: '',
       password: '',
+      confirmPassword: '',
     },
   })
 
-  const onSubmit = async (data: LoginFormValues) => {
+  const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
       })
 
       const result = await response.json()
 
       if (!response.ok) {
-        setError(result.error || 'Erro ao fazer login')
+        setError(result.error || 'Erro ao criar conta')
         return
       }
 
@@ -81,9 +89,9 @@ function LoginForm() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Entrar no Sistema</CardTitle>
+            <CardTitle>Criar Conta</CardTitle>
             <CardDescription>
-              Digite suas credenciais para acessar o sistema
+              Crie uma nova conta para acessar o sistema
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -132,24 +140,43 @@ function LoginForm() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirmar Senha</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="password"
+                          placeholder="Confirme sua senha"
+                          {...field}
+                          disabled={isLoading}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <Button
                   type="submit"
                   className="w-full"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Entrando...' : 'Entrar'}
+                  {isLoading ? 'Criando conta...' : 'Criar Conta'}
                 </Button>
               </form>
             </Form>
 
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-600">
-                Não tem uma conta?{' '}
+                Já tem uma conta?{' '}
                 <Link 
-                  href="/register" 
+                  href="/login" 
                   className="font-medium text-primary hover:text-primary/80"
                 >
-                  Criar conta
+                  Entrar
                 </Link>
               </p>
             </div>
@@ -166,7 +193,7 @@ function LoginForm() {
   )
 }
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -175,7 +202,7 @@ export default function LoginPage() {
         </div>
       </div>
     }>
-      <LoginForm />
+      <RegisterForm />
     </Suspense>
   )
 }

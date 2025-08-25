@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyTokenEdge } from '@/lib/auth';
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  
+  console.log('[MIDDLEWARE] Processing:', pathname);
 
   // Public routes that don't require authentication
   const publicRoutes = [
     '/',
     '/login',
+    '/register',
     '/api/auth/login',
+    '/api/auth/register',
     '/api/auth/logout',
   ];
 
@@ -25,24 +29,45 @@ export function middleware(request: NextRequest) {
 
   // Allow access to static assets
   if (isStaticAsset) {
+    console.log('[MIDDLEWARE] Static asset, allowing:', pathname);
     return NextResponse.next();
   }
 
   // Allow access to public routes
   if (isPublicRoute) {
+    console.log('[MIDDLEWARE] Public route, allowing:', pathname);
     return NextResponse.next();
   }
 
+  console.log('[MIDDLEWARE] Protected route, checking auth:', pathname);
+
   // For protected routes, check authentication
   const token = getTokenFromRequest(request);
+  console.log('[MIDDLEWARE] Token found:', !!token);
 
   if (!token) {
+    // For API routes, return 401 instead of redirect
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Token de acesso não encontrado' },
+        { status: 401 }
+      );
+    }
     return redirectToLogin(request);
   }
 
   // Validate the token
-  const payload = verifyToken(token);
+  const payload = await verifyTokenEdge(token);
+  console.log('[MIDDLEWARE] Token payload:', payload ? 'valid' : 'invalid');
   if (!payload) {
+    console.log('[MIDDLEWARE] Token validation failed, redirecting to login');
+    // For API routes, return 401 instead of redirect
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        { error: 'Token de acesso inválido' },
+        { status: 401 }
+      );
+    }
     return redirectToLogin(request);
   }
 
@@ -59,12 +84,14 @@ function getTokenFromRequest(request: NextRequest): string | null {
   // Try to get token from Authorization header first (for API routes)
   const authHeader = request.headers.get('authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
+    console.log('[MIDDLEWARE] Token found in Authorization header');
     return authHeader.substring(7);
   }
 
   // Try to get token from cookie (for page routes)
   const tokenFromCookie = request.cookies.get('token')?.value;
   if (tokenFromCookie) {
+    console.log('[MIDDLEWARE] Token found in cookie');
     return tokenFromCookie;
   }
 
@@ -72,9 +99,12 @@ function getTokenFromRequest(request: NextRequest): string | null {
   // (This is a fallback since middleware can't access localStorage directly)
   const tokenFromHeader = request.headers.get('x-auth-token');
   if (tokenFromHeader) {
+    console.log('[MIDDLEWARE] Token found in x-auth-token header');
     return tokenFromHeader;
   }
 
+  console.log('[MIDDLEWARE] No token found in any location');
+  console.log('[MIDDLEWARE] Available cookies:', request.cookies.getAll().map(c => c.name));
   return null;
 }
 
@@ -94,11 +124,10 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

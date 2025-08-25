@@ -1,9 +1,11 @@
 'use client'
 
 export function setAuthToken(token: string) {
+  console.log('[AUTH-CLIENT] Setting token:', token.substring(0, 20) + '...');
   localStorage.setItem('token', token);
   // Also set a cookie for middleware to access
-  document.cookie = `token=${token}; path=/; max-age=${24 * 60 * 60}`; // 24 hours
+  document.cookie = `token=${token}; path=/; max-age=${24 * 60 * 60}; SameSite=Lax`; // 24 hours
+  console.log('[AUTH-CLIENT] Cookie set:', document.cookie.includes('token='));
 }
 
 export function getAuthToken(): string | null {
