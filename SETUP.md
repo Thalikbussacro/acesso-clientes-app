@@ -305,21 +305,21 @@ feat(2.3): implement login page with form validation
 - [x] Style selected state with different background
 - [x] **COMMIT: `feat(6.2): implement access points sidebar with selection`**
 
-### 6.3 Access Point CRUD
-- [ ] Create access point creation dialog
-- [ ] Implement access point naming functionality
-- [ ] Add access point deletion with confirmation
-- [ ] Add access point renaming capability
-- [ ] Create API endpoints for access point operations
-- [ ] **COMMIT: `feat(6.3): implement access point CRUD operations`**
+### 6.3 Access Point CRUD ✅
+- [x] Create access point creation dialog
+- [x] Implement access point naming functionality
+- [x] Add access point deletion with confirmation
+- [x] Add access point renaming capability
+- [x] Create API endpoints for access point operations
+- [x] **COMMIT: `feat(6.3): implement access point CRUD operations`**
 
-### 6.4 Access Point API
-- [ ] Create `/src/app/api/access-points/route.ts`
-- [ ] Implement CRUD endpoints for access points
-- [ ] Add validation for access point names
-- [ ] Handle client_id association
-- [ ] Return access points ordered by creation date
-- [ ] **COMMIT: `feat(6.4): create access point management API`**
+### 6.4 Access Point API ✅
+- [x] Create `/src/app/api/access-points/route.ts`
+- [x] Implement CRUD endpoints for access points
+- [x] Add validation for access point names
+- [x] Handle client_id association
+- [x] Return access points ordered by creation date
+- [x] **COMMIT: `feat(6.4): create access point management API`**
 
 ## Stage 7: Rich Text Editor Integration
 
