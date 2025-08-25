@@ -72,6 +72,8 @@ export function RichEditor({
   lastEditedAt,
   maxHeight = 400,
 }: RichEditorProps) {
+  console.log('RichEditor: Component initialized with props:', { content: content?.substring(0, 50), readOnly, accessPointName })
+  
   const editorRef = useRef<HTMLDivElement>(null)
   const quillRef = useRef<QuillInstance | null>(null)
   const [isEditing, setIsEditing] = useState(!readOnly)
@@ -116,18 +118,26 @@ export function RichEditor({
     ],
   }
 
-  // Initialize Quill
-  useEffect(() => {
-    const initializeQuill = async () => {
-      if (!editorRef.current || quillRef.current) return
+  // Initialize Quill when element is available
+  const initializeQuill = useCallback(async (element: HTMLDivElement) => {
+    console.log('RichEditor: Starting Quill initialization...')
+    
+    if (quillRef.current) {
+      console.log('RichEditor: Quill already initialized, skipping')
+      return
+    }
 
-      try {
-        // Dynamic import to avoid SSR issues
-        const Quill = (await import('quill')).default
-        
-        // Create Quill instance
-        const quill = new Quill(editorRef.current, quillConfig) as unknown as QuillInstance
-        quillRef.current = quill
+    try {
+      console.log('RichEditor: Importing Quill...')
+      // Dynamic import to avoid SSR issues
+      const Quill = (await import('quill')).default
+      console.log('RichEditor: Quill imported successfully')
+      
+      console.log('RichEditor: Creating Quill instance...')
+      // Create Quill instance
+      const quill = new Quill(element, quillConfig) as unknown as QuillInstance
+      quillRef.current = quill
+      console.log('RichEditor: Quill instance created')
 
         // Set initial content
         if (content) {
@@ -198,22 +208,64 @@ export function RichEditor({
         const initialStats = getContentStats(initialContent)
         setContentStats(initialStats)
 
-        setIsLoading(false)
-      } catch (error) {
-        console.error('Error initializing Quill:', error)
-        setIsLoading(false)
+      console.log('RichEditor: Initialization complete, setting isLoading to false')
+      setIsLoading(false)
+    } catch (error) {
+      console.error('RichEditor: Error initializing Quill:', error)
+      setIsLoading(false)
+    }
+  }, [content, isEditing, readOnly])
+
+  // Effect to initialize Quill when element is ready
+  useEffect(() => {
+    console.log('RichEditor: useEffect for initialization, editorRef.current:', editorRef.current)
+    
+    if (editorRef.current && !quillRef.current) {
+      console.log('RichEditor: Element ready, calling initializeQuill')
+      initializeQuill(editorRef.current)
+      return
+    }
+    
+    // If element is not ready yet, try again after a short delay
+    if (!editorRef.current && !quillRef.current) {
+      console.log('RichEditor: Element not ready, trying again in 100ms')
+      const timer = setTimeout(() => {
+        if (editorRef.current && !quillRef.current) {
+          console.log('RichEditor: Element ready after timeout, calling initializeQuill')
+          initializeQuill(editorRef.current)
+        }
+      }, 100)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [initializeQuill])
+
+  // Additional effect to check for element availability
+  useEffect(() => {
+    const checkElement = () => {
+      console.log('RichEditor: Checking element availability, editorRef.current:', editorRef.current)
+      if (editorRef.current && !quillRef.current) {
+        console.log('RichEditor: Element found, initializing Quill')
+        initializeQuill(editorRef.current)
       }
     }
+    
+    // Check immediately
+    checkElement()
+    
+    // Check again after DOM updates
+    const timer = setTimeout(checkElement, 0)
+    
+    return () => clearTimeout(timer)
+  })
 
-    initializeQuill()
-
-    // Cleanup
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Browser beforeunload handler for unsaved changes
@@ -362,23 +414,7 @@ export function RichEditor({
     return `${lastEditedBy} • ${formattedDate}`
   }
 
-  if (isLoading) {
-    return (
-      <Card className={className}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Edit3 className="h-5 w-5" />
-            {accessPointName}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
+  console.log('RichEditor: Rendering component, isLoading:', isLoading)
 
   return (
     <Card className={className}>
@@ -502,8 +538,18 @@ export function RichEditor({
             }}
           />
           
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p>Carregando editor...</p>
+              </div>
+            </div>
+          )}
+          
           {/* Empty state */}
-          {!currentContent.trim() && !isEditing && (
+          {!isLoading && !currentContent.trim() && !isEditing && (
             <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
               <div className="text-center">
                 <Edit3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
