@@ -62,6 +62,7 @@ export default function ClientDetailsPage() {
   const [database, setDatabase] = useState<Database | null>(null)
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([])
   const [selectedAccessPoint, setSelectedAccessPoint] = useState<string | null>(null)
+  const [isLoadingAccessPoints, setIsLoadingAccessPoints] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showRevalidationModal, setShowRevalidationModal] = useState(false)
   const [hasValidSession, setHasValidSession] = useState(false)
@@ -163,37 +164,44 @@ export default function ClientDetailsPage() {
         }
       }
 
-      // Mock access points data (will be replaced with API call later)
-      setAccessPoints([
-        {
-          id: '1',
-          name: 'Acesso Principal',
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
-          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-          hasContent: true,
-          contentLength: 1250,
-        },
-        {
-          id: '2',
-          name: 'Configurações de Rede',
-          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-          hasContent: false,
-          contentLength: 0,
-        },
-        {
-          id: '3',
-          name: 'Backup e Restauração',
-          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
-          hasContent: true,
-          contentLength: 847,
-        },
-      ])
-
     } catch (error) {
       console.error('Error fetching client data:', error)
       setError('Erro de conexão')
     }
   }, [databaseId, clientId, router])
+
+  // Fetch access points
+  const fetchAccessPoints = useCallback(async () => {
+    try {
+      setIsLoadingAccessPoints(true)
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch(`/api/access-points?client_id=${clientId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAccessPoints(data.accessPoints || [])
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        console.error('Failed to fetch access points')
+        setAccessPoints([])
+      }
+    } catch (error) {
+      console.error('Error fetching access points:', error)
+      setAccessPoints([])
+    } finally {
+      setIsLoadingAccessPoints(false)
+    }
+  }, [clientId, router])
 
   // Initialize page
   useEffect(() => {
@@ -211,8 +219,11 @@ export default function ClientDetailsPage() {
       return
     }
 
-    // Fetch client data
-    fetchClientData().finally(() => {
+    // Fetch client data and access points
+    Promise.all([
+      fetchClientData(),
+      fetchAccessPoints(),
+    ]).finally(() => {
       setIsLoading(false)
     })
   }, [router, databaseId, checkSession, fetchClientData])
@@ -269,44 +280,114 @@ export default function ClientDetailsPage() {
     setSelectedAccessPoint(accessPointId)
   }
 
-  const handleAddAccessPoint = (name: string) => {
-    // Create new access point with mock data
-    const newAccessPoint: AccessPoint = {
-      id: `ap_${Date.now()}`,
-      name,
-      createdAt: new Date().toISOString(),
-      hasContent: false,
-      contentLength: 0,
+  const handleAddAccessPoint = async (name: string) => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch('/api/access-points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          client_id: clientId,
+          name,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const newAccessPoint = data.accessPoint
+        setAccessPoints(prev => [newAccessPoint, ...prev])
+        setSelectedAccessPoint(newAccessPoint.id)
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to create access point:', errorData.error)
+      }
+    } catch (error) {
+      console.error('Error creating access point:', error)
     }
-    
-    setAccessPoints(prev => [newAccessPoint, ...prev])
-    setSelectedAccessPoint(newAccessPoint.id)
-    
-    // TODO: Replace with actual API call in later sub-stages
-    console.log('Created new access point:', newAccessPoint)
   }
   
-  const handleEditAccessPoint = (id: string, newName: string) => {
-    setAccessPoints(prev => prev.map(ap => 
-      ap.id === id 
-        ? { ...ap, name: newName, updatedAt: new Date().toISOString() }
-        : ap
-    ))
-    
-    // TODO: Replace with actual API call in later sub-stages
-    console.log('Edited access point:', id, newName)
+  const handleEditAccessPoint = async (id: string, newName: string) => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch('/api/access-points', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          id,
+          name: newName,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        const updatedAccessPoint = data.accessPoint
+        setAccessPoints(prev => prev.map(ap => 
+          ap.id === id 
+            ? { ...ap, ...updatedAccessPoint }
+            : ap
+        ))
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to update access point:', errorData.error)
+      }
+    } catch (error) {
+      console.error('Error updating access point:', error)
+    }
   }
   
-  const handleDeleteAccessPoint = (id: string) => {
-    // If deleting selected access point, clear selection
-    if (selectedAccessPoint === id) {
-      setSelectedAccessPoint(null)
+  const handleDeleteAccessPoint = async (id: string) => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch('/api/access-points', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ id }),
+      })
+
+      if (response.ok) {
+        // If deleting selected access point, clear selection
+        if (selectedAccessPoint === id) {
+          setSelectedAccessPoint(null)
+        }
+        
+        setAccessPoints(prev => prev.filter(ap => ap.id !== id))
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to delete access point:', errorData.error)
+      }
+    } catch (error) {
+      console.error('Error deleting access point:', error)
     }
-    
-    setAccessPoints(prev => prev.filter(ap => ap.id !== id))
-    
-    // TODO: Replace with actual API call in later sub-stages
-    console.log('Deleted access point:', id)
   }
 
   // Format custom field value for display
@@ -517,6 +598,7 @@ export default function ClientDetailsPage() {
               onAddAccessPoint={handleAddAccessPoint}
               onEditAccessPoint={handleEditAccessPoint}
               onDeleteAccessPoint={handleDeleteAccessPoint}
+              isLoading={isLoadingAccessPoints}
               className="h-fit"
             />
           </div>
