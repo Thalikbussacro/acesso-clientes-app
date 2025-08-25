@@ -289,13 +289,13 @@ feat(2.3): implement login page with form validation
 
 ## Stage 6: Access Points Management
 
-### 6.1 Client Details Layout
-- [ ] Create `/src/app/clients/[databaseId]/[clientId]/page.tsx`
-- [ ] Design two-column layout (access points left, details right)
-- [ ] Create client header with key information
-- [ ] Style layout with shadcn/ui components
-- [ ] Add responsive design for mobile
-- [ ] **COMMIT: `feat(6.1): create client details layout with two-column design`**
+### 6.1 Client Details Layout ✅
+- [x] Create `/src/app/clients/[databaseId]/[clientId]/page.tsx`
+- [x] Design two-column layout (access points left, details right)
+- [x] Create client header with key information
+- [x] Style layout with shadcn/ui components
+- [x] Add responsive design for mobile
+- [x] **COMMIT: `feat(6.1): create client details layout with two-column design`**
 
 ### 6.2 Access Points Sidebar
 - [ ] Create `/src/components/access-points-list.tsx`
