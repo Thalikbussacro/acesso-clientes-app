@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { SessionTimer } from '@/components/session-timer'
 import { SessionRevalidationModal } from '@/components/session-revalidation-modal'
+import { AccessPointsList } from '@/components/access-points-list'
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
 import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { 
@@ -18,7 +19,6 @@ import {
   Mail, 
   Building, 
   Eye,
-  Plus,
   FileText
 } from 'lucide-react'
 
@@ -51,7 +51,9 @@ interface AccessPoint {
   id: string
   name: string
   createdAt: string
+  updatedAt?: string
   hasContent: boolean
+  contentLength?: number
 }
 
 export default function ClientDetailsPage() {
@@ -166,20 +168,24 @@ export default function ClientDetailsPage() {
         {
           id: '1',
           name: 'Acesso Principal',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+          updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
           hasContent: true,
+          contentLength: 1250,
         },
         {
           id: '2',
           name: 'Configurações de Rede',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
           hasContent: false,
+          contentLength: 0,
         },
         {
           id: '3',
           name: 'Backup e Restauração',
-          createdAt: new Date().toISOString(),
+          createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
           hasContent: true,
+          contentLength: 847,
         },
       ])
 
@@ -263,9 +269,44 @@ export default function ClientDetailsPage() {
     setSelectedAccessPoint(accessPointId)
   }
 
-  const handleAddAccessPoint = () => {
-    // Will be implemented in later sub-stages
-    console.log('Add access point functionality will be implemented later')
+  const handleAddAccessPoint = (name: string) => {
+    // Create new access point with mock data
+    const newAccessPoint: AccessPoint = {
+      id: `ap_${Date.now()}`,
+      name,
+      createdAt: new Date().toISOString(),
+      hasContent: false,
+      contentLength: 0,
+    }
+    
+    setAccessPoints(prev => [newAccessPoint, ...prev])
+    setSelectedAccessPoint(newAccessPoint.id)
+    
+    // TODO: Replace with actual API call in later sub-stages
+    console.log('Created new access point:', newAccessPoint)
+  }
+  
+  const handleEditAccessPoint = (id: string, newName: string) => {
+    setAccessPoints(prev => prev.map(ap => 
+      ap.id === id 
+        ? { ...ap, name: newName, updatedAt: new Date().toISOString() }
+        : ap
+    ))
+    
+    // TODO: Replace with actual API call in later sub-stages
+    console.log('Edited access point:', id, newName)
+  }
+  
+  const handleDeleteAccessPoint = (id: string) => {
+    // If deleting selected access point, clear selection
+    if (selectedAccessPoint === id) {
+      setSelectedAccessPoint(null)
+    }
+    
+    setAccessPoints(prev => prev.filter(ap => ap.id !== id))
+    
+    // TODO: Replace with actual API call in later sub-stages
+    console.log('Deleted access point:', id)
   }
 
   // Format custom field value for display
@@ -469,52 +510,15 @@ export default function ClientDetailsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Access Points List */}
           <div className="lg:col-span-1">
-            <Card className="h-fit">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Pontos de Acesso</CardTitle>
-                  <Button size="sm" onClick={handleAddAccessPoint}>
-                    <Plus className="h-4 w-4 mr-1" />
-                    Novo
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {accessPoints.length > 0 ? (
-                  <div className="divide-y">
-                    {accessPoints.map((accessPoint) => (
-                      <div
-                        key={accessPoint.id}
-                        className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
-                          selectedAccessPoint === accessPoint.id ? 'bg-muted' : ''
-                        }`}
-                        onClick={() => handleSelectAccessPoint(accessPoint.id)}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium text-sm">{accessPoint.name}</span>
-                          </div>
-                          {accessPoint.hasContent && (
-                            <div className="w-2 h-2 bg-blue-600 rounded-full" />
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Criado em {new Date(accessPoint.createdAt).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-6 text-center">
-                    <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Nenhum ponto de acesso criado ainda
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <AccessPointsList
+              accessPoints={accessPoints}
+              selectedAccessPoint={selectedAccessPoint}
+              onSelectAccessPoint={handleSelectAccessPoint}
+              onAddAccessPoint={handleAddAccessPoint}
+              onEditAccessPoint={handleEditAccessPoint}
+              onDeleteAccessPoint={handleDeleteAccessPoint}
+              className="h-fit"
+            />
           </div>
 
           {/* Right Column: Access Point Details */}
