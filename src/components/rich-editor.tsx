@@ -4,6 +4,16 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { 
   Edit3, 
   Save, 
@@ -70,6 +80,8 @@ export function RichEditor({
   const [wordCount, setWordCount] = useState(0)
   const [characterCount, setCharacterCount] = useState(0)
   const [autoSaveStatus, setAutoSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved')
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Quill configuration
@@ -183,6 +195,20 @@ export function RichEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Browser beforeunload handler for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges && isEditing) {
+        e.preventDefault()
+        e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasChanges, isEditing])
+
   // Update content when prop changes
   useEffect(() => {
     if (quillRef.current && content !== currentContent) {
@@ -221,6 +247,29 @@ export function RichEditor({
     }
   }, [onSave])
 
+  // Confirmation dialog for unsaved changes
+  const confirmWithUnsavedChanges = (action: () => void) => {
+    if (hasChanges && isEditing) {
+      setPendingAction(() => action)
+      setShowUnsavedDialog(true)
+    } else {
+      action()
+    }
+  }
+
+  const handleConfirmDiscard = () => {
+    setShowUnsavedDialog(false)
+    if (pendingAction) {
+      pendingAction()
+      setPendingAction(null)
+    }
+  }
+
+  const handleCancelDiscard = () => {
+    setShowUnsavedDialog(false)
+    setPendingAction(null)
+  }
+
   // Handle edit mode toggle
   const handleEdit = () => {
     setIsEditing(true)
@@ -251,25 +300,29 @@ export function RichEditor({
 
   // Handle cancel
   const handleCancel = () => {
-    if (quillRef.current) {
-      try {
-        const delta = JSON.parse(originalContent)
-        quillRef.current.setContents(delta)
-      } catch {
-        quillRef.current.root.innerHTML = originalContent
+    const performCancel = () => {
+      if (quillRef.current) {
+        try {
+          const delta = JSON.parse(originalContent)
+          quillRef.current.setContents(delta)
+        } catch {
+          quillRef.current.root.innerHTML = originalContent
+        }
       }
+      
+      setCurrentContent(originalContent)
+      setHasChanges(false)
+      setIsEditing(false)
+      setAutoSaveStatus('saved')
+      
+      if (quillRef.current) {
+        quillRef.current.enable(false)
+      }
+      
+      onCancel?.()
     }
-    
-    setCurrentContent(originalContent)
-    setHasChanges(false)
-    setIsEditing(false)
-    setAutoSaveStatus('saved')
-    
-    if (quillRef.current) {
-      quillRef.current.enable(false)
-    }
-    
-    onCancel?.()
+
+    confirmWithUnsavedChanges(performCancel)
   }
 
   // Format last edited info
@@ -417,6 +470,55 @@ export function RichEditor({
           )}
         </div>
       </CardContent>
+      
+      {/* Unsaved Changes Confirmation Dialog */}
+      <AlertDialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+              Alterações Não Salvas
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Você tem alterações não salvas neste documento. Se continuar, todas as alterações serão perdidas.
+              <br /><br />
+              Deseja salvar suas alterações antes de continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDiscard}>
+              Continuar Editando
+            </AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                if (onSave) {
+                  try {
+                    await onSave(currentContent)
+                    setOriginalContent(currentContent)
+                    setHasChanges(false)
+                    setAutoSaveStatus('saved')
+                    handleConfirmDiscard()
+                  } catch (error) {
+                    console.error('Failed to save:', error)
+                  }
+                } else {
+                  handleConfirmDiscard()
+                }
+              }}
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Salvar e Continuar
+            </Button>
+            <AlertDialogAction
+              onClick={handleConfirmDiscard}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Descartar Alterações
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }

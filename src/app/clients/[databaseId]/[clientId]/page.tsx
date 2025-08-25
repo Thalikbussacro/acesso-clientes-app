@@ -63,7 +63,9 @@ export default function ClientDetailsPage() {
   const [database, setDatabase] = useState<Database | null>(null)
   const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([])
   const [selectedAccessPoint, setSelectedAccessPoint] = useState<string | null>(null)
+  const [accessPointContent, setAccessPointContent] = useState<string>('')
   const [isLoadingAccessPoints, setIsLoadingAccessPoints] = useState(false)
+  const [isLoadingContent, setIsLoadingContent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showRevalidationModal, setShowRevalidationModal] = useState(false)
   const [hasValidSession, setHasValidSession] = useState(false)
@@ -276,9 +278,43 @@ export default function ClientDetailsPage() {
     router.push(`/clients/${databaseId}`)
   }
 
+  // Fetch access point content
+  const fetchAccessPointContent = useCallback(async (accessPointId: string) => {
+    try {
+      setIsLoadingContent(true)
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch(`/api/access-details?access_point_id=${accessPointId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setAccessPointContent(data.accessPoint.content || '')
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        console.error('Failed to fetch access point content')
+        setAccessPointContent('')
+      }
+    } catch (error) {
+      console.error('Error fetching access point content:', error)
+      setAccessPointContent('')
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }, [router])
+
   // Access point handlers
   const handleSelectAccessPoint = (accessPointId: string) => {
     setSelectedAccessPoint(accessPointId)
+    fetchAccessPointContent(accessPointId)
   }
 
   const handleAddAccessPoint = async (name: string) => {
@@ -607,22 +643,68 @@ export default function ClientDetailsPage() {
           {/* Right Column: Access Point Details */}
           <div className="lg:col-span-2">
             {selectedAccessPoint ? (
-              <RichEditor
-                accessPointName={accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Documento'}
-                content=""
-                placeholder="Comece a escrever a documentação deste ponto de acesso..."
-                onSave={async (content) => {
-                  // TODO: Implement save functionality with API call
-                  console.log('Saving content:', content)
-                }}
-                onChange={(content) => {
-                  // TODO: Handle content changes
-                  console.log('Content changed:', content)
-                }}
-                lastEditedBy="Usuario Atual"
-                lastEditedAt={new Date().toISOString()}
-                maxHeight={600}
-              />
+              isLoadingContent ? (
+                <Card className="min-h-[500px]">
+                  <CardContent className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <FileText className="h-8 w-8 animate-pulse mx-auto mb-4 text-blue-600" />
+                      <p className="text-lg">Carregando conteúdo...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <RichEditor
+                  accessPointName={accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Documento'}
+                  content={accessPointContent}
+                  placeholder="Comece a escrever a documentação deste ponto de acesso..."
+                  onSave={async (content) => {
+                    try {
+                      const token = getAuthToken()
+                      if (!token) {
+                        throw new Error('Token not found')
+                      }
+
+                      const response = await fetch('/api/access-details', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          access_point_id: selectedAccessPoint,
+                          content,
+                        }),
+                      })
+
+                      if (response.ok) {
+                        // Update access point content length in the list
+                        setAccessPoints(prev => prev.map(ap => 
+                          ap.id === selectedAccessPoint 
+                            ? { ...ap, hasContent: true, contentLength: content.length }
+                            : ap
+                        ))
+                        console.log('Content saved successfully')
+                      } else if (response.status === 401) {
+                        removeAuthToken()
+                        router.push('/login')
+                      } else {
+                        const errorData = await response.json()
+                        console.error('Failed to save content:', errorData.error)
+                        throw new Error('Falha ao salvar o conteúdo')
+                      }
+                    } catch (error) {
+                      console.error('Error saving content:', error)
+                      throw error
+                    }
+                  }}
+                  onChange={(content) => {
+                    setAccessPointContent(content)
+                  }}
+                  lastEditedBy="Usuário Atual"
+                  lastEditedAt={new Date().toISOString()}
+                  maxHeight={600}
+                />
+              )
             ) : (
               <Card className="min-h-[500px]">
                 <CardContent className="flex items-center justify-center h-96">
