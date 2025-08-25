@@ -297,13 +297,13 @@ feat(2.3): implement login page with form validation
 - [x] Add responsive design for mobile
 - [x] **COMMIT: `feat(6.1): create client details layout with two-column design`**
 
-### 6.2 Access Points Sidebar
-- [ ] Create `/src/components/access-points-list.tsx`
-- [ ] Display list of access points for current client
-- [ ] Add "New Access Point" button
-- [ ] Implement access point selection state
-- [ ] Style selected state with different background
-- [ ] **COMMIT: `feat(6.2): implement access points sidebar with selection`**
+### 6.2 Access Points Sidebar ✅
+- [x] Create `/src/components/access-points-list.tsx`
+- [x] Display list of access points for current client
+- [x] Add "New Access Point" button
+- [x] Implement access point selection state
+- [x] Style selected state with different background
+- [x] **COMMIT: `feat(6.2): implement access points sidebar with selection`**
 
 ### 6.3 Access Point CRUD
 - [ ] Create access point creation dialog
