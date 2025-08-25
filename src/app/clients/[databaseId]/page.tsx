@@ -229,10 +229,11 @@ export default function ClientsPage() {
           }),
         }).catch(console.error)
       }
+      
+      // Navigate to client details page
+      router.push(`/clients/${databaseId}/${clientId}`)
     }
-    console.log('View client details:', clientId)
-    // router.push(`/clients/${databaseId}/${clientId}`) // Will be implemented later
-  }, [clients, databaseId])
+  }, [clients, databaseId, router])
 
   const handleEditClient = useCallback((clientId: string) => {
     const client = clients.find(c => c.id === clientId)

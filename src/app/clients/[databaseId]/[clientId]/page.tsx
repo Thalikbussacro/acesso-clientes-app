@@ -1,0 +1,583 @@
+'use client'
+
+import { useEffect, useState, useCallback } from 'react'
+import { useRouter, useParams } from 'next/navigation'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { SessionTimer } from '@/components/session-timer'
+import { SessionRevalidationModal } from '@/components/session-revalidation-modal'
+import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
+import { cleanupDatabaseSession } from '@/lib/session-cleanup'
+import { 
+  ArrowLeft, 
+  User, 
+  Calendar, 
+  Phone, 
+  Mail, 
+  Building, 
+  Eye,
+  Plus,
+  FileText
+} from 'lucide-react'
+
+interface Client {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  status: 'active' | 'inactive'
+  createdAt: string
+  updatedAt: string
+  lastAccess: string | null
+  customFields: Record<string, unknown>
+}
+
+interface CustomField {
+  id: string
+  name: string
+  type: 'text' | 'number' | 'email' | 'phone' | 'date' | 'boolean'
+  required: boolean
+}
+
+interface Database {
+  id: string
+  name: string
+  timeoutMinutes: number
+}
+
+interface AccessPoint {
+  id: string
+  name: string
+  createdAt: string
+  hasContent: boolean
+}
+
+export default function ClientDetailsPage() {
+  const [isLoading, setIsLoading] = useState(true)
+  const [client, setClient] = useState<Client | null>(null)
+  const [database, setDatabase] = useState<Database | null>(null)
+  const [accessPoints, setAccessPoints] = useState<AccessPoint[]>([])
+  const [selectedAccessPoint, setSelectedAccessPoint] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [showRevalidationModal, setShowRevalidationModal] = useState(false)
+  const [hasValidSession, setHasValidSession] = useState(false)
+  
+  // Mock custom fields (will be fetched from database later)
+  const mockCustomFields: CustomField[] = [
+    {
+      id: 'company',
+      name: 'Empresa',
+      type: 'text',
+      required: true,
+    },
+    {
+      id: 'priority',
+      name: 'Prioridade',
+      type: 'boolean',
+      required: false,
+    },
+    {
+      id: 'last_contact',
+      name: 'Último Contato',
+      type: 'date',
+      required: false,
+    },
+  ]
+
+  const router = useRouter()
+  const params = useParams()
+  const databaseId = params.databaseId as string
+  const clientId = params.clientId as string
+
+  // Check if user has valid session for this database
+  const checkSession = useCallback(() => {
+    const sessionKey = `db_session_${databaseId}`
+    const storedData = localStorage.getItem(sessionKey)
+    
+    if (storedData) {
+      try {
+        const sessionData = JSON.parse(storedData)
+        const now = Date.now()
+        const isValid = sessionData.expiresAt > now
+        
+        setHasValidSession(isValid)
+        return isValid
+      } catch (error) {
+        console.error('Error parsing session data:', error)
+        setHasValidSession(false)
+        return false
+      }
+    }
+    
+    setHasValidSession(false)
+    return false
+  }, [databaseId])
+
+  // Fetch client data
+  const fetchClientData = useCallback(async () => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      // Fetch client details
+      const clientResponse = await fetch(`/api/clients?database_id=${databaseId}&client_id=${clientId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (clientResponse.ok) {
+        const clientData = await clientResponse.json()
+        const foundClient = clientData.clients.find((c: Client) => c.id === clientId)
+        if (foundClient) {
+          setClient(foundClient)
+        } else {
+          setError('Cliente não encontrado')
+        }
+      } else if (clientResponse.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+        return
+      } else {
+        setError('Erro ao carregar dados do cliente')
+      }
+
+      // Fetch database info
+      const dbResponse = await fetch('/api/databases', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      })
+
+      if (dbResponse.ok) {
+        const dbData = await dbResponse.json()
+        const foundDb = dbData.databases.find((db: Database) => db.id === databaseId)
+        if (foundDb) {
+          setDatabase(foundDb)
+        }
+      }
+
+      // Mock access points data (will be replaced with API call later)
+      setAccessPoints([
+        {
+          id: '1',
+          name: 'Acesso Principal',
+          createdAt: new Date().toISOString(),
+          hasContent: true,
+        },
+        {
+          id: '2',
+          name: 'Configurações de Rede',
+          createdAt: new Date().toISOString(),
+          hasContent: false,
+        },
+        {
+          id: '3',
+          name: 'Backup e Restauração',
+          createdAt: new Date().toISOString(),
+          hasContent: true,
+        },
+      ])
+
+    } catch (error) {
+      console.error('Error fetching client data:', error)
+      setError('Erro de conexão')
+    }
+  }, [databaseId, clientId, router])
+
+  // Initialize page
+  useEffect(() => {
+    const token = getAuthToken()
+    if (!token) {
+      router.push('/login')
+      return
+    }
+
+    // Check if user has valid session for this database
+    const hasSession = checkSession()
+    if (!hasSession) {
+      // Redirect to database password validation
+      router.push(`/databases/${databaseId}`)
+      return
+    }
+
+    // Fetch client data
+    fetchClientData().finally(() => {
+      setIsLoading(false)
+    })
+  }, [router, databaseId, checkSession, fetchClientData])
+
+  // Handle session expiry from timer
+  const handleSessionExpired = useCallback(() => {
+    setHasValidSession(false)
+    router.push(`/databases/${databaseId}`)
+  }, [router, databaseId])
+
+  // Handle revalidation needed from timer
+  const handleRevalidationNeeded = useCallback(() => {
+    setShowRevalidationModal(true)
+  }, [])
+
+  // Handle successful revalidation
+  const handleRevalidationSuccess = useCallback((sessionData: unknown) => {
+    setHasValidSession(true)
+    setShowRevalidationModal(false)
+    
+    // Notify session timer about the update
+    const broadcastChannel = new BroadcastChannel(`session_${databaseId}`)
+    broadcastChannel.postMessage({
+      type: 'SESSION_REVALIDATED',
+      data: sessionData
+    })
+    broadcastChannel.close()
+  }, [databaseId])
+
+  // Handle forced logout
+  const handleForceLogout = useCallback(async () => {
+    setHasValidSession(false)
+    setShowRevalidationModal(false)
+    
+    // Perform comprehensive cleanup
+    try {
+      await cleanupDatabaseSession(databaseId)
+      console.log('Force logout cleanup completed successfully')
+    } catch (error) {
+      console.error('Error during force logout cleanup:', error)
+    }
+    
+    // Redirect to databases page
+    router.push('/databases')
+  }, [databaseId, router])
+
+  // Navigation handlers
+  const handleBackToClients = () => {
+    router.push(`/clients/${databaseId}`)
+  }
+
+  // Access point handlers
+  const handleSelectAccessPoint = (accessPointId: string) => {
+    setSelectedAccessPoint(accessPointId)
+  }
+
+  const handleAddAccessPoint = () => {
+    // Will be implemented in later sub-stages
+    console.log('Add access point functionality will be implemented later')
+  }
+
+  // Format custom field value for display
+  const formatCustomFieldValue = (field: CustomField, value: unknown) => {
+    if (value === null || value === undefined || value === '') {
+      return '—'
+    }
+
+    switch (field.type) {
+      case 'boolean':
+        return value ? 'Sim' : 'Não'
+      case 'date':
+        return new Date(value as string).toLocaleDateString('pt-BR')
+      case 'email':
+        return value as string
+      case 'phone':
+        return value as string
+      default:
+        return String(value)
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <User className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-lg">Carregando detalhes do cliente...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !client || !database) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <User className="h-5 w-5" />
+              Erro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-gray-600 mb-4">
+              {error || 'Cliente não encontrado'}
+            </p>
+            <Button onClick={handleBackToClients} variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar aos Clientes
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (!hasValidSession) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-600">
+              <User className="h-5 w-5" />
+              Sessão Inválida
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-gray-600 mb-4">
+              Sua sessão expirou ou é inválida. Faça login novamente.
+            </p>
+            <Button onClick={() => router.push(`/databases/${databaseId}`)} variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Fazer Login na Base de Dados
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-4 space-y-6">
+        {/* Header with Navigation and Session Timer */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleBackToClients} 
+              variant="ghost" 
+              size="sm"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Lista de Clientes
+            </Button>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-sm text-muted-foreground">{database.name}</span>
+          </div>
+
+          {/* Session Timer */}
+          <SessionTimer
+            databaseId={databaseId}
+            onSessionExpired={handleSessionExpired}
+            onRevalidationNeeded={handleRevalidationNeeded}
+          />
+        </div>
+
+        {/* Client Header */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-100 p-3 rounded-full">
+                  <User className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={client.status === 'active' ? 'default' : 'secondary'}>
+                      {client.status === 'active' ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">•</span>
+                    <span className="text-sm text-muted-foreground">
+                      ID: {client.id.slice(0, 8)}...
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  Criado em {new Date(client.createdAt).toLocaleDateString('pt-BR')}
+                </div>
+                {client.lastAccess && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Eye className="h-4 w-4" />
+                    Último acesso: {new Date(client.lastAccess).toLocaleDateString('pt-BR')}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            {/* Client Information Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Contact Information */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Informações de Contato</h3>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {client.email ? (
+                        <a href={`mailto:${client.email}`} className="text-blue-600 hover:underline">
+                          {client.email}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm">
+                      {client.phone ? (
+                        <a href={`tel:${client.phone}`} className="text-blue-600 hover:underline">
+                          {client.phone}
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Fields */}
+              {mockCustomFields.map((field) => {
+                const value = client.customFields[field.id]
+                if (!value && !field.required) return null
+                
+                return (
+                  <div key={field.id} className="space-y-3">
+                    <h3 className="font-semibold text-gray-900">{field.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <Building className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">
+                        {formatCustomFieldValue(field, value)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Two-Column Layout: Access Points and Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Access Points List */}
+          <div className="lg:col-span-1">
+            <Card className="h-fit">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Pontos de Acesso</CardTitle>
+                  <Button size="sm" onClick={handleAddAccessPoint}>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Novo
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                {accessPoints.length > 0 ? (
+                  <div className="divide-y">
+                    {accessPoints.map((accessPoint) => (
+                      <div
+                        key={accessPoint.id}
+                        className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${
+                          selectedAccessPoint === accessPoint.id ? 'bg-muted' : ''
+                        }`}
+                        onClick={() => handleSelectAccessPoint(accessPoint.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{accessPoint.name}</span>
+                          </div>
+                          {accessPoint.hasContent && (
+                            <div className="w-2 h-2 bg-blue-600 rounded-full" />
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Criado em {new Date(accessPoint.createdAt).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center">
+                    <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      Nenhum ponto de acesso criado ainda
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Access Point Details */}
+          <div className="lg:col-span-2">
+            <Card className="min-h-[500px]">
+              <CardHeader>
+                <CardTitle className="text-lg">
+                  {selectedAccessPoint
+                    ? accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Detalhes do Acesso'
+                    : 'Selecione um Ponto de Acesso'
+                  }
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedAccessPoint ? (
+                  <div className="space-y-4">
+                    <div className="bg-muted/30 p-6 rounded-lg text-center">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="font-medium mb-2">Editor de Conteúdo</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        O editor de texto rico será implementado na próxima etapa
+                      </p>
+                      <Button variant="outline" size="sm">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Editar Conteúdo (Em Breve)
+                      </Button>
+                    </div>
+                    
+                    {/* Placeholder for image management */}
+                    <div className="bg-muted/20 p-6 rounded-lg text-center">
+                      <Building className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                      <h3 className="font-medium mb-2">Gerenciamento de Imagens</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Upload e gerenciamento de imagens será implementado em etapas futuras
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="font-medium text-lg mb-2">Nenhum ponto de acesso selecionado</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Selecione um ponto de acesso da lista ao lado para ver os detalhes
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* Session Revalidation Modal */}
+      <SessionRevalidationModal
+        isOpen={showRevalidationModal}
+        onClose={() => setShowRevalidationModal(false)}
+        databaseId={databaseId}
+        databaseName={database.name}
+        onRevalidationSuccess={handleRevalidationSuccess}
+        onForceLogout={handleForceLogout}
+      />
+    </div>
+  )
+}
