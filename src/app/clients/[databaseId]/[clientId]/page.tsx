@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator'
 import { SessionTimer } from '@/components/session-timer'
 import { SessionRevalidationModal } from '@/components/session-revalidation-modal'
 import { AccessPointsList } from '@/components/access-points-list'
+import { RichEditor } from '@/components/rich-editor'
 import { removeAuthToken, getAuthToken } from '@/lib/auth-client'
 import { cleanupDatabaseSession } from '@/lib/session-cleanup'
 import { 
@@ -605,52 +606,46 @@ export default function ClientDetailsPage() {
 
           {/* Right Column: Access Point Details */}
           <div className="lg:col-span-2">
-            <Card className="min-h-[500px]">
-              <CardHeader>
-                <CardTitle className="text-lg">
-                  {selectedAccessPoint
-                    ? accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Detalhes do Acesso'
-                    : 'Selecione um Ponto de Acesso'
-                  }
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedAccessPoint ? (
-                  <div className="space-y-4">
-                    <div className="bg-muted/30 p-6 rounded-lg text-center">
-                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <h3 className="font-medium mb-2">Editor de Conteúdo</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        O editor de texto rico será implementado na próxima etapa
-                      </p>
-                      <Button variant="outline" size="sm">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Editar Conteúdo (Em Breve)
-                      </Button>
-                    </div>
-                    
-                    {/* Placeholder for image management */}
-                    <div className="bg-muted/20 p-6 rounded-lg text-center">
-                      <Building className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                      <h3 className="font-medium mb-2">Gerenciamento de Imagens</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Upload e gerenciamento de imagens será implementado em etapas futuras
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-96">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-medium text-lg mb-2">Nenhum ponto de acesso selecionado</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Selecione um ponto de acesso da lista ao lado para ver os detalhes
-                      </p>
+            {selectedAccessPoint ? (
+              <RichEditor
+                accessPointName={accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Documento'}
+                content=""
+                placeholder="Comece a escrever a documentação deste ponto de acesso..."
+                onSave={async (content) => {
+                  // TODO: Implement save functionality with API call
+                  console.log('Saving content:', content)
+                }}
+                onChange={(content) => {
+                  // TODO: Handle content changes
+                  console.log('Content changed:', content)
+                }}
+                lastEditedBy="Usuario Atual"
+                lastEditedAt={new Date().toISOString()}
+                maxHeight={600}
+              />
+            ) : (
+              <Card className="min-h-[500px]">
+                <CardContent className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-medium text-lg mb-2">Nenhum ponto de acesso selecionado</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Selecione um ponto de acesso da lista ao lado para ver os detalhes e editar o conteúdo
+                    </p>
+                    <div className="bg-muted/20 p-6 rounded-lg mt-6">
+                      <h4 className="font-medium mb-2">Funcionalidades Disponíveis:</h4>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Editor de texto rico com formatação completa</li>
+                        <li>• Suporte a cabeçalhos, listas e código</li>
+                        <li>• Contadores de palavras e caracteres</li>
+                        <li>• Salvamento manual com controle de versões</li>
+                        <li>• Modo de visualização e edição</li>
+                      </ul>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
