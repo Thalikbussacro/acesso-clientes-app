@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -447,6 +447,56 @@ export default function ClientDetailsPage() {
     }
   }
 
+  // Memoize the onSave function to prevent re-renders
+  const handleSaveContent = useCallback(async (content: string) => {
+    try {
+      const token = getAuthToken()
+      if (!token) {
+        throw new Error('Token not found')
+      }
+
+      const response = await fetch('/api/access-details', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          access_point_id: selectedAccessPoint,
+          content,
+        }),
+      })
+
+      if (response.ok) {
+        // Update access point content length in the list
+        setAccessPoints(prev => prev.map(ap => 
+          ap.id === selectedAccessPoint 
+            ? { ...ap, hasContent: true, contentLength: content.length }
+            : ap
+        ))
+        console.log('Content saved successfully')
+      } else if (response.status === 401) {
+        removeAuthToken()
+        router.push('/login')
+      } else {
+        const errorData = await response.json()
+        console.error('Failed to save content:', errorData.error)
+        throw new Error('Falha ao salvar o conteúdo')
+      }
+    } catch (error) {
+      console.error('Error saving content:', error)
+      throw error
+    }
+  }, [selectedAccessPoint, router])
+
+  // Memoize the onChange function to prevent re-renders
+  const handleContentChange = useCallback((content: string) => {
+    setAccessPointContent(content)
+  }, [])
+
+  // Memoize the lastEditedAt to prevent re-renders - should be stable
+  const stableLastEditedAt = useMemo(() => new Date().toISOString(), [selectedAccessPoint])
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -657,51 +707,10 @@ export default function ClientDetailsPage() {
                   accessPointName={accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Documento'}
                   content={accessPointContent}
                   placeholder="Comece a escrever a documentação deste ponto de acesso..."
-                  onSave={async (content) => {
-                    try {
-                      const token = getAuthToken()
-                      if (!token) {
-                        throw new Error('Token not found')
-                      }
-
-                      const response = await fetch('/api/access-details', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          access_point_id: selectedAccessPoint,
-                          content,
-                        }),
-                      })
-
-                      if (response.ok) {
-                        // Update access point content length in the list
-                        setAccessPoints(prev => prev.map(ap => 
-                          ap.id === selectedAccessPoint 
-                            ? { ...ap, hasContent: true, contentLength: content.length }
-                            : ap
-                        ))
-                        console.log('Content saved successfully')
-                      } else if (response.status === 401) {
-                        removeAuthToken()
-                        router.push('/login')
-                      } else {
-                        const errorData = await response.json()
-                        console.error('Failed to save content:', errorData.error)
-                        throw new Error('Falha ao salvar o conteúdo')
-                      }
-                    } catch (error) {
-                      console.error('Error saving content:', error)
-                      throw error
-                    }
-                  }}
-                  onChange={(content) => {
-                    setAccessPointContent(content)
-                  }}
+                  onSave={handleSaveContent}
+                  onChange={handleContentChange}
                   lastEditedBy="Usuário Atual"
-                  lastEditedAt={new Date().toISOString()}
+                  lastEditedAt={stableLastEditedAt}
                   maxHeight={600}
                 />
               )

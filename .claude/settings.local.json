@@ -10,7 +10,8 @@
       "Bash(git commit:*)",
       "Bash(npm run dev:*)",
       "Bash(npx shadcn-ui:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:jam.dev)"
     ],
     "deny": [],
     "ask": []

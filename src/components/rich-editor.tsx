@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,16 @@ import {
   Shield
 } from 'lucide-react'
 import { sanitizeContent, getContentStats, CONTENT_LIMITS } from '@/lib/content-security'
+
+// Global DOM-based registry to prevent duplicate initialization
+const GLOBAL_QUILL_INSTANCES = new Set<string>()
+
+// Cleanup function for page unload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', () => {
+    GLOBAL_QUILL_INSTANCES.clear()
+  })
+}
 
 // Quill types (using actual Quill interface)
 interface QuillInstance {
@@ -74,6 +84,17 @@ export function RichEditor({
 }: RichEditorProps) {
   console.log('RichEditor: Component initialized with props:', { content: content?.substring(0, 50), readOnly, accessPointName })
   
+  // Generate stable editor ID based on access point and a random suffix
+  const editorId = useMemo(() => {
+    const cleanName = accessPointName?.replace(/[^a-zA-Z0-9]/g, '-') || 'default'
+    const randomSuffix = Math.random().toString(36).substr(2, 9)
+    return `quill-${cleanName}-${randomSuffix}`
+  }, [accessPointName])
+  
+  // Instance tracking refs
+  const isInitializingRef = useRef(false)
+  const isInitializedRef = useRef(false)
+  
   const editorRef = useRef<HTMLDivElement>(null)
   const quillRef = useRef<QuillInstance | null>(null)
   const [isEditing, setIsEditing] = useState(!readOnly)
@@ -113,196 +134,43 @@ export function RichEditor({
     },
     formats: [
       'header', 'bold', 'italic', 'underline', 'strike',
-      'color', 'background', 'list', 'bullet', 'align',
+      'color', 'background', 'list', 'align',
       'blockquote', 'code-block', 'link'
     ],
   }
 
-  // Initialize Quill when element is available
-  const initializeQuill = useCallback(async (element: HTMLDivElement) => {
-    console.log('RichEditor: Starting Quill initialization...')
+  // Destroy Quill instance
+  const destroyQuill = useCallback(() => {
+    console.log(`RichEditor[${editorId}]: Destroying Quill instance...`)
     
     if (quillRef.current) {
-      console.log('RichEditor: Quill already initialized, skipping')
-      return
+      // Remove all event listeners
+      quillRef.current.off('text-change')
+      quillRef.current = null
     }
-
-    try {
-      console.log('RichEditor: Importing Quill...')
-      // Dynamic import to avoid SSR issues
-      const Quill = (await import('quill')).default
-      console.log('RichEditor: Quill imported successfully')
+    
+    // Clean up DOM
+    if (editorRef.current) {
+      // Remove any Quill-generated content
+      const toolbars = editorRef.current.querySelectorAll('.ql-toolbar')
+      toolbars.forEach(toolbar => toolbar.remove())
       
-      console.log('RichEditor: Creating Quill instance...')
-      // Create Quill instance
-      const quill = new Quill(element, quillConfig) as unknown as QuillInstance
-      quillRef.current = quill
-      console.log('RichEditor: Quill instance created')
-
-        // Set initial content
-        if (content) {
-          try {
-            // Try to parse as Delta first
-            const delta = JSON.parse(content)
-            quill.setContents(delta)
-          } catch {
-            // If not JSON, treat as HTML/text
-            quill.root.innerHTML = content
-          }
-        }
-
-        // Set read-only state
-        quill.enable(!readOnly && isEditing)
-
-        // Set up change handler
-        const handleTextChange = () => {
-          const htmlContent = quill.root.innerHTML
-          
-          // Sanitize content for security
-          const sanitizedContent = sanitizeContent(htmlContent)
-          
-          // Update content stats
-          const stats = getContentStats(sanitizedContent)
-          setContentStats(stats)
-          
-          // Check for content limit violations
-          const errors: string[] = []
-          if (!stats.isWithinLimits) {
-            if (sanitizedContent.length > CONTENT_LIMITS.MAX_LENGTH) {
-              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_LENGTH} caracteres`)
-            }
-            if (stats.wordCount > CONTENT_LIMITS.MAX_WORD_COUNT) {
-              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_WORD_COUNT} palavras`)
-            }
-            if (stats.paragraphCount > CONTENT_LIMITS.MAX_PARAGRAPH_COUNT) {
-              errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_PARAGRAPH_COUNT} parágrafos`)
-            }
-          }
-          setContentErrors(errors)
-          
-          setCurrentContent(sanitizedContent)
-          setHasChanges(sanitizedContent !== originalContent)
-          
-          onChange?.(sanitizedContent)
-          
-          // Handle auto-save (only if content is valid)
-          if (autoSave && isEditing && !readOnly && errors.length === 0) {
-            setAutoSaveStatus('unsaved')
-            
-            // Clear existing timeout
-            if (autoSaveTimeoutRef.current) {
-              clearTimeout(autoSaveTimeoutRef.current)
-            }
-            
-            // Set new timeout
-            autoSaveTimeoutRef.current = setTimeout(() => {
-              handleAutoSave(sanitizedContent)
-            }, autoSaveDelay)
-          }
-        }
-
-        quill.on('text-change', handleTextChange)
-
-        // Initial stats calculation
-        const initialContent = content || ''
-        const initialStats = getContentStats(initialContent)
-        setContentStats(initialStats)
-
-      console.log('RichEditor: Initialization complete, setting isLoading to false')
-      setIsLoading(false)
-    } catch (error) {
-      console.error('RichEditor: Error initializing Quill:', error)
-      setIsLoading(false)
-    }
-  }, [content, isEditing, readOnly])
-
-  // Effect to initialize Quill when element is ready
-  useEffect(() => {
-    console.log('RichEditor: useEffect for initialization, editorRef.current:', editorRef.current)
-    
-    if (editorRef.current && !quillRef.current) {
-      console.log('RichEditor: Element ready, calling initializeQuill')
-      initializeQuill(editorRef.current)
-      return
-    }
-    
-    // If element is not ready yet, try again after a short delay
-    if (!editorRef.current && !quillRef.current) {
-      console.log('RichEditor: Element not ready, trying again in 100ms')
-      const timer = setTimeout(() => {
-        if (editorRef.current && !quillRef.current) {
-          console.log('RichEditor: Element ready after timeout, calling initializeQuill')
-          initializeQuill(editorRef.current)
-        }
-      }, 100)
+      const containers = editorRef.current.querySelectorAll('.ql-container')
+      containers.forEach(container => container.remove())
       
-      return () => clearTimeout(timer)
-    }
-  }, [initializeQuill])
-
-  // Additional effect to check for element availability
-  useEffect(() => {
-    const checkElement = () => {
-      console.log('RichEditor: Checking element availability, editorRef.current:', editorRef.current)
-      if (editorRef.current && !quillRef.current) {
-        console.log('RichEditor: Element found, initializing Quill')
-        initializeQuill(editorRef.current)
-      }
+      // Reset the element
+      editorRef.current.innerHTML = ''
+      editorRef.current.className = editorRef.current.className.replace(/ql-\w+/g, '').trim()
+      editorRef.current.removeAttribute('data-quill-initialized')
     }
     
-    // Check immediately
-    checkElement()
+    // Clear initialization state and remove from global registry
+    GLOBAL_QUILL_INSTANCES.delete(editorId)
+    isInitializedRef.current = false
+    isInitializingRef.current = false
     
-    // Check again after DOM updates
-    const timer = setTimeout(checkElement, 0)
-    
-    return () => clearTimeout(timer)
-  })
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // Browser beforeunload handler for unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasChanges && isEditing) {
-        e.preventDefault()
-        e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?'
-        return e.returnValue
-      }
-    }
-
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-  }, [hasChanges, isEditing])
-
-  // Update content when prop changes
-  useEffect(() => {
-    if (quillRef.current && content !== currentContent) {
-      try {
-        const delta = JSON.parse(content)
-        quillRef.current.setContents(delta)
-      } catch {
-        quillRef.current.root.innerHTML = content
-      }
-      setCurrentContent(content)
-      setOriginalContent(content)
-      setHasChanges(false)
-    }
-  }, [content, currentContent])
-
-  // Update read-only state
-  useEffect(() => {
-    if (quillRef.current) {
-      quillRef.current.enable(!readOnly && isEditing)
-    }
-  }, [readOnly, isEditing])
+    console.log(`RichEditor[${editorId}]: Quill instance destroyed`)
+  }, [editorId])
 
   // Auto-save handler
   const handleAutoSave = useCallback(async (content: string) => {
@@ -319,6 +187,254 @@ export function RichEditor({
       setAutoSaveStatus('unsaved')
     }
   }, [onSave])
+
+  // Initialize Quill when element is available
+  const initializeQuill = useCallback(async () => {
+    const element = editorRef.current
+    if (!element) {
+      console.log(`RichEditor[${editorId}]: No element available for initialization`)
+      return
+    }
+
+    // ROBUST CHECK: if element already has a Quill container or is marked as initialized, abort
+    const hasQuillContainer = element.classList.contains('ql-container') || element.querySelector('.ql-container')
+    const isMarkedInitialized = element.dataset.quillInitialized === 'true'
+    const isInGlobalRegistry = GLOBAL_QUILL_INSTANCES.has(editorId)
+    
+    if (hasQuillContainer || isMarkedInitialized || isInGlobalRegistry) {
+      console.log(`RichEditor[${editorId}]: Already initialized (container: ${hasQuillContainer}, marked: ${isMarkedInitialized}, registry: ${isInGlobalRegistry}), skipping`)
+      return
+    }
+
+    // Additional safety check: scan for any existing toolbars in this specific element tree
+    const existingToolbar = element.querySelector('.ql-toolbar')
+    if (existingToolbar) {
+      console.log(`RichEditor[${editorId}]: Found existing toolbar in element tree, removing it`)
+      existingToolbar.remove()
+    }
+
+    // Prevent concurrent initialization
+    if (isInitializingRef.current || isInitializedRef.current) {
+      console.log(`RichEditor[${editorId}]: Already initializing or initialized, skipping`)
+      return
+    }
+
+    // Mark element as being initialized and add to global registry
+    element.dataset.quillInitialized = 'initializing'
+    GLOBAL_QUILL_INSTANCES.add(editorId)
+
+    console.log(`RichEditor[${editorId}]: Starting Quill initialization...`)
+    isInitializingRef.current = true
+
+    try {
+      // Clean up any existing Quill instance in this element only
+      if (quillRef.current) {
+        quillRef.current.off('text-change')
+        quillRef.current = null
+      }
+      
+      // Clean up only this element's Quill content
+      if (element.classList.contains('ql-container') || element.classList.contains('ql-editor')) {
+        console.log(`RichEditor[${editorId}]: Clearing Quill classes from target element`)
+        element.className = element.className.replace(/ql-\w+/g, '').trim()
+        element.innerHTML = ''
+      }
+
+      console.log(`RichEditor[${editorId}]: Importing Quill...`)
+      // Dynamic import to avoid SSR issues
+      const Quill = (await import('quill')).default
+      console.log(`RichEditor[${editorId}]: Quill imported successfully`)
+      
+      // Small delay to ensure DOM cleanup is processed
+      await new Promise(resolve => setTimeout(resolve, 50))
+      
+      console.log(`RichEditor[${editorId}]: Creating Quill instance...`)
+      // Create Quill instance
+      const quill = new Quill(element, quillConfig) as unknown as QuillInstance
+      quillRef.current = quill
+      console.log(`RichEditor[${editorId}]: Quill instance created`)
+
+      // Set initial content
+      if (content) {
+        try {
+          // Try to parse as Delta first
+          const delta = JSON.parse(content)
+          quill.setContents(delta)
+        } catch {
+          // If not JSON, treat as HTML/text
+          quill.root.innerHTML = content
+        }
+      }
+
+      // Set read-only state
+      quill.enable(!readOnly && isEditing)
+
+      // Set up change handler
+      const handleTextChange = () => {
+        const htmlContent = quill.root.innerHTML
+        
+        // Sanitize content for security
+        const sanitizedContent = sanitizeContent(htmlContent)
+        
+        // Update content stats
+        const stats = getContentStats(sanitizedContent)
+        setContentStats(stats)
+        
+        // Check for content limit violations
+        const errors: string[] = []
+        if (!stats.isWithinLimits) {
+          if (sanitizedContent.length > CONTENT_LIMITS.MAX_LENGTH) {
+            errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_LENGTH} caracteres`)
+          }
+          if (stats.wordCount > CONTENT_LIMITS.MAX_WORD_COUNT) {
+            errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_WORD_COUNT} palavras`)
+          }
+          if (stats.paragraphCount > CONTENT_LIMITS.MAX_PARAGRAPH_COUNT) {
+            errors.push(`Conteúdo excede ${CONTENT_LIMITS.MAX_PARAGRAPH_COUNT} parágrafos`)
+          }
+        }
+        setContentErrors(errors)
+        
+        setCurrentContent(sanitizedContent)
+        setHasChanges(sanitizedContent !== originalContent)
+        
+        onChange?.(sanitizedContent)
+        
+        // Handle auto-save (only if content is valid)
+        if (autoSave && isEditing && !readOnly && errors.length === 0) {
+          setAutoSaveStatus('unsaved')
+          
+          // Clear existing timeout
+          if (autoSaveTimeoutRef.current) {
+            clearTimeout(autoSaveTimeoutRef.current)
+          }
+          
+          // Set new timeout
+          autoSaveTimeoutRef.current = setTimeout(() => {
+            handleAutoSave(sanitizedContent)
+          }, autoSaveDelay)
+        }
+      }
+
+      quill.on('text-change', handleTextChange)
+
+      // Initial stats calculation
+      const initialContent = content || ''
+      const initialStats = getContentStats(initialContent)
+      setContentStats(initialStats)
+
+      isInitializedRef.current = true
+      // Mark element as successfully initialized
+      if (editorRef.current) {
+        editorRef.current.dataset.quillInitialized = 'true'
+      }
+      console.log(`RichEditor[${editorId}]: Initialization complete, setting isLoading to false`)
+      setIsLoading(false)
+    } catch (error) {
+      console.error(`RichEditor[${editorId}]: Error initializing Quill:`, error)
+      // Remove from global registry on failure
+      GLOBAL_QUILL_INSTANCES.delete(editorId)
+      // Mark element as failed
+      if (editorRef.current) {
+        editorRef.current.dataset.quillInitialized = 'failed'
+      }
+      setIsLoading(false)
+    } finally {
+      isInitializingRef.current = false
+    }
+  }, [editorId, content, isEditing, readOnly, onChange, autoSave, autoSaveDelay, originalContent, onSave, destroyQuill])
+
+  // Single effect to initialize Quill when element is ready
+  useEffect(() => {
+    console.log(`RichEditor[${editorId}]: useEffect for initialization, editorRef.current:`, editorRef.current, 'initialized:', isInitializedRef.current)
+    
+    // Only initialize if element exists and not already initialized
+    if (editorRef.current && !isInitializedRef.current && !isInitializingRef.current) {
+      console.log(`RichEditor[${editorId}]: Element ready, calling initializeQuill`)
+      
+      // Small delay to handle React StrictMode double mounting
+      const initTimer = setTimeout(() => {
+        // Triple check: element exists, not initialized, and not in global registry
+        if (editorRef.current && 
+            !isInitializedRef.current && 
+            !isInitializingRef.current && 
+            !GLOBAL_QUILL_INSTANCES.has(editorId)) {
+          initializeQuill()
+        } else {
+          console.log(`RichEditor[${editorId}]: Skipping delayed initialization - already handled`)
+        }
+      }, 10)
+      
+      return () => clearTimeout(initTimer)
+    }
+  }, [editorId, initializeQuill])
+
+  // Cleanup on unmount with StrictMode protection
+  useEffect(() => {
+    let cleanupExecuted = false
+    
+    return () => {
+      if (cleanupExecuted) {
+        console.log(`RichEditor[${editorId}]: Cleanup already executed (StrictMode double cleanup), skipping`)
+        return
+      }
+      
+      cleanupExecuted = true
+      console.log(`RichEditor[${editorId}]: Component unmounting, cleaning up...`)
+      
+      // Clear auto-save timeout
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current)
+      }
+      
+      // Clean up Quill instance
+      destroyQuill()
+    }
+  }, [editorId, destroyQuill])
+
+  // Browser beforeunload handler for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges && isEditing) {
+        e.preventDefault()
+        e.returnValue = 'Você tem alterações não salvas. Deseja realmente sair?'
+        return e.returnValue
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasChanges, isEditing])
+
+  // This effect is now handled by the access point change effect above
+
+  // Update content when access point changes without reinitializing
+  useEffect(() => {
+    if (quillRef.current && isInitializedRef.current) {
+      console.log(`RichEditor[${editorId}]: Access point changed, updating content only`)
+      // Just update the content, don't reinitialize the entire editor
+      if (content) {
+        try {
+          const delta = JSON.parse(content)
+          quillRef.current.setContents(delta)
+        } catch {
+          quillRef.current.root.innerHTML = content
+        }
+      } else {
+        quillRef.current.root.innerHTML = ''
+      }
+      setCurrentContent(content)
+      setOriginalContent(content)
+      setHasChanges(false)
+    }
+  }, [editorId, content])
+
+  // Update read-only state
+  useEffect(() => {
+    if (quillRef.current) {
+      quillRef.current.enable(!readOnly && isEditing)
+    }
+  }, [readOnly, isEditing])
 
   // Confirmation dialog for unsaved changes
   const confirmWithUnsavedChanges = (action: () => void) => {
