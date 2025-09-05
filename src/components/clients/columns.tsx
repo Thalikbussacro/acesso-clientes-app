@@ -39,187 +39,147 @@ export function createColumns(
   onEditClient?: (clientId: string) => void,
   onDeleteClient?: (clientId: string) => void
 ): ColumnDef<Client>[] {
-  const staticColumns: ColumnDef<Client>[] = [
-  {
-    accessorKey: 'name',
-    header: 'Nome',
+  const columns: ColumnDef<Client>[] = [
+    {
+      accessorKey: 'name',
+      header: 'Nome',
+      cell: ({ row }) => {
+        const name = row.getValue('name') as string
+        
+        return (
+          <div className="font-medium">
+            {name || 'Sem nome'}
+          </div>
+        )
+      },
+      filterFn: 'includesString',
+    }
+  ]
+
+  // Add cidade column if it exists in custom fields
+  const cidadeField = customFields.find(field => 
+    field.id.toLowerCase() === 'cidade' || 
+    field.name.toLowerCase().includes('cidade')
+  )
+  
+  if (cidadeField) {
+    columns.push({
+      accessorKey: `customFields.${cidadeField.id}`,
+      header: 'Cidade',
+      cell: ({ row }) => {
+        const value = row.original.customFields[cidadeField.id]
+        return (
+          <div className="text-sm text-gray-600">
+            {value ? String(value) : '—'}
+          </div>
+        )
+      },
+    })
+  }
+
+  // Add último acesso column (mock for now - would come from database)
+  columns.push({
+    id: 'lastAccess',
+    header: 'Último Acesso',
     cell: ({ row }) => {
-      const name = row.getValue('name') as string
-      return (
-        <div className="font-medium">
-          {name || 'Sem nome'}
-        </div>
-      )
-    },
-    filterFn: 'includesString',
-  },
-  {
-    accessorKey: 'email',
-    header: 'Email',
-    cell: ({ row }) => {
-      const email = row.getValue('email') as string | null
+      // Mock data - would come from database last_access field
+      const mockLastAccess = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
       return (
         <div className="text-sm text-gray-600">
-          {email || '—'}
+          {mockLastAccess.toLocaleDateString('pt-BR')}
         </div>
       )
     },
-  },
-  {
-    accessorKey: 'phone',
-    header: 'Telefone',
+  })
+
+  // Add última modificação column
+  columns.push({
+    accessorKey: 'updatedAt',
+    header: 'Última Modificação',
     cell: ({ row }) => {
-      const phone = row.getValue('phone') as string | null
-      return (
-        <div className="text-sm text-gray-600">
-          {phone || '—'}
-        </div>
-      )
-    },
-  },
-  {
-    accessorKey: 'status',
-    header: 'Status',
-    cell: ({ row }) => {
-      const status = row.getValue('status') as 'active' | 'inactive'
-      return (
-        <Badge variant={status === 'active' ? 'default' : 'secondary'}>
-          {status === 'active' ? 'Ativo' : 'Inativo'}
-        </Badge>
-      )
-    },
-  },
-  {
-    accessorKey: 'createdAt',
-    header: 'Criado em',
-    cell: ({ row }) => {
-      const createdAt = row.getValue('createdAt') as string
-      const date = new Date(createdAt)
+      const updatedAt = row.getValue('updatedAt') as string
+      const date = new Date(updatedAt)
       return (
         <div className="text-sm text-gray-600">
           {date.toLocaleDateString('pt-BR')}
         </div>
       )
     },
-  },
-  {
+  })
+
+  // Add último contato column if it exists in custom fields
+  const ultimoContatoField = customFields.find(field => 
+    field.id.toLowerCase().includes('contato') || 
+    field.name.toLowerCase().includes('contato')
+  )
+  
+  if (ultimoContatoField) {
+    columns.push({
+      accessorKey: `customFields.${ultimoContatoField.id}`,
+      header: 'Último Contato',
+      cell: ({ row }) => {
+        const value = row.original.customFields[ultimoContatoField.id]
+        if (!value) {
+          return <span className="text-gray-400">—</span>
+        }
+        
+        if (ultimoContatoField.type === 'date') {
+          const date = new Date(value as string)
+          return (
+            <div className="text-sm text-gray-600">
+              {date.toLocaleDateString('pt-BR')}
+            </div>
+          )
+        }
+        
+        return (
+          <div className="text-sm text-gray-600">
+            {String(value)}
+          </div>
+        )
+      },
+    })
+  }
+
+  // Add actions column (compact, appears on row hover)
+  columns.push({
     id: 'actions',
-    header: 'Ações',
+    header: '',
     cell: ({ row }) => {
       const client = row.original
 
       return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Abrir menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Ações</DropdownMenuLabel>
-            <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(client.id)}
-            >
-              Copiar ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex items-center gap-2"
-              onClick={() => onViewClient?.(client.id)}
-            >
-              <Eye className="h-4 w-4" />
-              Ver detalhes
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              className="flex items-center gap-2"
-              onClick={() => onEditClient?.(client.id)}
-            >
-              <Edit className="h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="flex items-center gap-2 text-red-600"
-              onClick={() => onDeleteClient?.(client.id)}
-            >
-              <Trash2 className="h-4 w-4" />
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 hover:bg-blue-100"
+            onClick={(e) => {
+              e.stopPropagation()
+              onEditClient?.(client.id)
+            }}
+            title="Editar cliente"
+          >
+            <Edit className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 w-8 p-0 hover:bg-red-100"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDeleteClient?.(client.id)
+            }}
+            title="Excluir cliente"
+          >
+            <Trash2 className="h-4 w-4 text-red-600" />
+          </Button>
+        </div>
       )
     },
-  }]
+  })
 
-  // Generate dynamic columns for custom fields
-  const dynamicColumns: ColumnDef<Client>[] = customFields.map((field) => ({
-    accessorKey: `customFields.${field.id}`,
-    header: field.name,
-    cell: ({ row }) => {
-      const value = row.original.customFields[field.id]
-      
-      if (value === null || value === undefined || value === '') {
-        return <span className="text-gray-400">—</span>
-      }
-
-      switch (field.type) {
-        case 'boolean':
-          return (
-            <Badge variant={value ? 'default' : 'secondary'}>
-              {value ? 'Sim' : 'Não'}
-            </Badge>
-          )
-        case 'date':
-          const date = new Date(value as string)
-          return (
-            <span className="text-sm">
-              {date.toLocaleDateString('pt-BR')}
-            </span>
-          )
-        case 'email':
-          return (
-            <a 
-              href={`mailto:${value}`}
-              className="text-blue-600 hover:underline text-sm"
-            >
-              {value as string}
-            </a>
-          )
-        case 'phone':
-          const phone = value as string
-          return (
-            <a 
-              href={`tel:${phone.replace(/\D/g, '')}`}
-              className="text-blue-600 hover:underline text-sm"
-            >
-              {phone}
-            </a>
-          )
-        default:
-          return <span className="text-sm">{String(value)}</span>
-      }
-    },
-    filterFn: (row, columnId, filterValue) => {
-      const value = row.original.customFields[field.id]
-      
-      if (!filterValue || filterValue === 'all') return true
-      
-      if (value === null || value === undefined || value === '') {
-        return false
-      }
-      
-      if (field.type === 'boolean') {
-        return String(value) === filterValue
-      }
-      
-      return String(value).toLowerCase().includes(filterValue.toLowerCase())
-    },
-  }))
-
-  // Insert dynamic columns before the actions column
-  const actionsColumn = staticColumns.pop()! // Remove actions column
-  return [...staticColumns, ...dynamicColumns, actionsColumn]
+  return columns
 }
 
 // Default columns for backward compatibility

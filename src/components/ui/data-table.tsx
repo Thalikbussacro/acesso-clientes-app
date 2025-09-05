@@ -47,6 +47,7 @@ interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string
   customFields?: CustomField[]
   enableCustomFieldFiltering?: boolean
+  onRowClick?: (row: TData) => void
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +55,7 @@ export function DataTable<TData, TValue>({
   data,
   customFields = [],
   enableCustomFieldFiltering = false,
+  onRowClick,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -224,9 +226,9 @@ export function DataTable<TData, TValue>({
   }, [router, searchParams])
 
   return (
-    <div className="space-y-4">
-      {/* Toolbar */}
-      <div className="flex flex-col space-y-4">
+    <div className="space-y-3">
+      {/* Toolbar - Compact */}
+      <div className="flex flex-col space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {/* Global Search Input */}
@@ -236,7 +238,7 @@ export function DataTable<TData, TValue>({
                 placeholder="Buscar em todos os campos..."
                 value={globalFilter}
                 onChange={(event) => handleGlobalFilterChange(event.target.value)}
-                className="pl-8 w-80"
+                className="pl-8 w-80 h-9"
               />
             </div>
             
@@ -256,7 +258,7 @@ export function DataTable<TData, TValue>({
           {/* Column Visibility Toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button variant="outline" className="ml-auto h-9">
               Colunas <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -282,7 +284,7 @@ export function DataTable<TData, TValue>({
         </DropdownMenu>
         </div>
         
-        {/* Custom Fields Filters */}
+        {/* Custom Fields Filters - Compact */}
         {enableCustomFieldFiltering && customFields.length > 0 && (
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-sm font-medium text-muted-foreground">
@@ -297,7 +299,7 @@ export function DataTable<TData, TValue>({
                 <div key={field.id} className="flex items-center space-x-2">
                   <label className="text-sm font-medium">{field.name}:</label>
                   <select
-                    className="h-8 rounded border border-input bg-transparent px-2 text-sm min-w-[120px]"
+                    className="h-7 rounded border border-input bg-transparent px-2 text-sm min-w-[120px]"
                     value={activeCustomFieldFilters[field.id] || 'all'}
                     onChange={(e) => handleCustomFieldFilterChange(field.id, e.target.value)}
                   >
@@ -325,12 +327,12 @@ export function DataTable<TData, TValue>({
         )}
       </div>
 
-      {/* Active Filters Display */}
+      {/* Active Filters Display - Compact */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/30 rounded-lg">
-          <span className="text-sm font-medium text-muted-foreground">Filtros ativos:</span>
+        <div className="flex flex-wrap items-center gap-2 p-2 bg-muted/30 rounded-lg">
+          <span className="text-xs font-medium text-muted-foreground">Filtros ativos:</span>
           {globalFilter && (
-            <Badge variant="secondary" className="gap-1">
+            <Badge variant="secondary" className="gap-1 text-xs">
               Busca: &ldquo;{globalFilter}&rdquo;
               <X 
                 className="h-3 w-3 cursor-pointer" 
@@ -349,7 +351,7 @@ export function DataTable<TData, TValue>({
               : value
               
             return (
-              <Badge key={fieldId} variant="secondary" className="gap-1">
+              <Badge key={fieldId} variant="secondary" className="gap-1 text-xs">
                 {field.name}: {displayValue}
                 <X 
                   className="h-3 w-3 cursor-pointer" 
@@ -361,15 +363,15 @@ export function DataTable<TData, TValue>({
         </div>
       )}
       
-      {/* Table */}
+      {/* Table - Compact */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="h-10">
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="py-2">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -388,9 +390,11 @@ export function DataTable<TData, TValue>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && 'selected'}
+                  className={`group ${onRowClick ? 'cursor-pointer hover:bg-muted/50 transition-colors' : ''} h-10`}
+                  onClick={() => onRowClick?.(row.original)}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell key={cell.id} className="py-2">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
@@ -398,7 +402,7 @@ export function DataTable<TData, TValue>({
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center">
+                <TableCell colSpan={columns.length} className="h-16 text-center">
                   Nenhum resultado encontrado.
                 </TableCell>
               </TableRow>
@@ -407,17 +411,17 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between space-x-2 py-4">
-        <div className="flex-1 text-sm text-muted-foreground">
+      {/* Pagination - Compact */}
+      <div className="flex items-center justify-between space-x-2 py-2">
+        <div className="flex-1 text-xs text-muted-foreground">
           {table.getFilteredSelectedRowModel().rows.length} de{' '}
           {table.getFilteredRowModel().rows.length} linha(s) selecionada(s).
         </div>
-        <div className="flex items-center space-x-6 lg:space-x-8">
+        <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Linhas por página</p>
+            <p className="text-xs font-medium">Linhas por página</p>
             <select
-              className="h-8 w-[70px] rounded border border-input bg-transparent px-2 text-sm"
+              className="h-7 w-[60px] rounded border border-input bg-transparent px-1 text-xs"
               value={table.getState().pagination.pageSize}
               onChange={(e) => {
                 table.setPageSize(Number(e.target.value))
@@ -430,14 +434,14 @@ export function DataTable<TData, TValue>({
               ))}
             </select>
           </div>
-          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+          <div className="flex w-[80px] items-center justify-center text-xs font-medium">
             Página {table.getState().pagination.pageIndex + 1} de{' '}
             {table.getPageCount()}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1">
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={() => table.setPageIndex(0)}
               disabled={!table.getCanPreviousPage()}
             >
@@ -446,7 +450,7 @@ export function DataTable<TData, TValue>({
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
             >
@@ -455,7 +459,7 @@ export function DataTable<TData, TValue>({
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
             >
@@ -464,7 +468,7 @@ export function DataTable<TData, TValue>({
             </Button>
             <Button
               variant="outline"
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 p-0"
               onClick={() => table.setPageIndex(table.getPageCount() - 1)}
               disabled={!table.getCanNextPage()}
             >

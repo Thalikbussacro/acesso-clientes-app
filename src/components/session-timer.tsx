@@ -312,82 +312,66 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
 
   if (isExpired) {
     return (
-      <Card className="border-red-200 bg-red-50">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <div>
-                <p className="font-medium text-red-800">Sessão Expirada</p>
-                <p className="text-sm text-red-600">Faça login novamente para continuar</p>
-              </div>
-            </div>
-            <Button onClick={handleLogout} size="sm" variant="outline">
-              <LogOut className="h-4 w-4 mr-1" />
-              Voltar
-            </Button>
+      <div className="flex items-center gap-2">
+        <div className="relative w-8 h-8">
+          <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+        <Button onClick={handleLogout} size="sm" variant="ghost" className="text-xs text-red-600 hover:text-red-800">
+          <LogOut className="h-3 w-3 mr-1" />
+          Expirada
+        </Button>
+      </div>
     )
   }
 
   return (
-    <Card className="border-blue-200">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Clock className={`h-5 w-5 ${getTimerColor()}`} />
-              <div>
-                <p className="font-medium text-gray-800">Sessão Ativa</p>
-                <p className="text-sm text-gray-600">
-                  Tempo restante: <span className={`font-mono font-semibold ${getTimerColor()}`}>
-                    {formatTimeRemaining(timeRemaining)}
-                  </span>
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => loadSessionData()}
-                size="sm"
-                variant="ghost"
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button onClick={handleLogout} size="sm" variant="outline">
-                <LogOut className="h-4 w-4 mr-1" />
-                Sair
-              </Button>
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Progress 
-              value={getProgressPercentage()} 
-              className="h-2"
-            />
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>0:00</span>
-              <span>
-                {sessionData ? `${sessionData.timeoutMinutes}:00` : '--:--'}
-              </span>
-            </div>
-          </div>
-          
-          {shouldShowRevalidation && (
-            <div className="flex items-center gap-2 p-2 bg-orange-50 border border-orange-200 rounded-md">
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <p className="text-sm text-orange-800">
-                Sessão expirará em breve. A revalidação será solicitada automaticamente.
-              </p>
-            </div>
-          )}
+    <div className="flex items-center gap-2">
+      {/* Circular Progress Timer */}
+      <div className="relative w-8 h-8">
+        <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+          {/* Background circle */}
+          <circle
+            cx="16"
+            cy="16"
+            r="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="text-gray-200"
+          />
+          {/* Progress circle */}
+          <circle
+            cx="16"
+            cy="16"
+            r="14"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeDasharray={`${2 * Math.PI * 14}`}
+            strokeDashoffset={`${2 * Math.PI * 14 * (1 - getProgressPercentage() / 100)}`}
+            className={`transition-all duration-1000 ${getTimerColor()}`}
+          />
+        </svg>
+        
+        {/* Timer text inside circle */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className={`text-xs font-mono font-semibold ${getTimerColor()}`}>
+            {timeRemaining >= 60000 
+              ? Math.floor(timeRemaining / 60000)
+              : Math.floor(timeRemaining / 1000)
+            }
+          </span>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      
+      {/* Compact actions */}
+      <Button onClick={handleLogout} size="sm" variant="ghost" className="text-xs text-gray-500 hover:text-gray-700 px-2">
+        <LogOut className="h-3 w-3 mr-1" />
+        Sair
+      </Button>
+    </div>
   )
 }

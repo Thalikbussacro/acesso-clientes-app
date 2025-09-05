@@ -351,34 +351,50 @@ export default function ClientsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header with session timer */}
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <Button 
-                  onClick={handleBackToDatabases} 
-                  variant="ghost" 
-                  size="sm"
-                >
-                  <ArrowLeft className="h-4 w-4 mr-1" />
-                  Bases de Dados
-                </Button>
-              </div>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-                  <Database className="h-8 w-8 text-blue-600" />
-                  {database.name}
-                </h1>
-                <p className="text-gray-600 mt-1">
-                  Gerencie os clientes desta base de dados
-                </p>
-              </div>
+      <div className="max-w-7xl mx-auto space-y-4">
+        {/* Compact Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <Button 
+                onClick={handleBackToDatabases} 
+                variant="ghost" 
+                size="sm"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Bases de Dados
+              </Button>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+              <Database className="h-6 w-6 text-blue-600" />
+              {database.name}
+            </h1>
+          </div>
+          
+          <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
+            <Plus className="h-4 w-4" />
+            Novo Cliente
+          </Button>
+        </div>
+
+        {/* Stats and Timer - Combined Row */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <div className="flex flex-wrap gap-3 text-gray-600">
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+              <Users className="h-4 w-4" />
+              <span>{database.clientCount} cliente{database.clientCount !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+              <Database className="h-4 w-4" />
+              <span>{database.customFieldsCount} campo{database.customFieldsCount !== 1 ? 's' : ''}</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+              <Database className="h-4 w-4" />
+              <span>{database.timeoutMinutes}min</span>
             </div>
           </div>
-
-          {/* Session Timer */}
+          
+          {/* Session Timer integrated */}
           <SessionTimer
             databaseId={databaseId}
             onSessionExpired={handleSessionExpired}
@@ -386,70 +402,17 @@ export default function ClientsPage() {
           />
         </div>
 
-        {/* Database Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{database.clientCount}</div>
-              <p className="text-xs text-muted-foreground">
-                cliente{database.clientCount !== 1 ? 's' : ''} registrado{database.clientCount !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Campos Personalizados</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{database.customFieldsCount}</div>
-              <p className="text-xs text-muted-foreground">
-                campo{database.customFieldsCount !== 1 ? 's' : ''} configurado{database.customFieldsCount !== 1 ? 's' : ''}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Timeout da Sessão</CardTitle>
-              <Database className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{database.timeoutMinutes}</div>
-              <p className="text-xs text-muted-foreground">
-                minuto{database.timeoutMinutes !== 1 ? 's' : ''} de sessão
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Client Management Section */}
+        {/* Client Management Section - Ultra Compact */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Lista de Clientes</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  Clientes cadastrados nesta base de dados
-                </p>
-              </div>
-              <Button className="gap-2" onClick={() => setShowAddDialog(true)}>
-                <Plus className="h-4 w-4" />
-                Novo Cliente
-              </Button>
-            </div>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Clientes</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 pb-4 px-4">
             {isLoadingClients ? (
-              <div className="flex items-center justify-center py-12">
+              <div className="flex items-center justify-center py-6">
                 <div className="text-center">
-                  <Users className="h-8 w-8 animate-pulse mx-auto mb-4 text-blue-600" />
-                  <p className="text-lg">Carregando clientes...</p>
+                  <Users className="h-5 w-5 animate-pulse mx-auto mb-2 text-blue-600" />
+                  <p className="text-sm">Carregando clientes...</p>
                 </div>
               </div>
             ) : (
@@ -463,6 +426,7 @@ export default function ClientsPage() {
                 data={clients}
                 customFields={mockCustomFields}
                 enableCustomFieldFiltering={true}
+                onRowClick={(client) => handleViewClient((client as Client).id)}
               />
             )}
           </CardContent>
