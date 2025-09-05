@@ -143,11 +143,23 @@ export async function POST(request: NextRequest) {
     const now = new Date()
 
     if (existingDetails) {
+      // Get the next version number
+      const lastHistoryEntry = await db.accessDetailHistory.findFirst({
+        where: {
+          access_point_id: access_point_id,
+        },
+        orderBy: {
+          version: 'desc',
+        },
+      })
+
+      const nextVersion = (lastHistoryEntry?.version || 0) + 1
+
       // Create history entry before updating
       await db.accessDetailHistory.create({
         data: {
           access_point_id: access_point_id,
-          version: 1, // We'll implement proper versioning later
+          version: nextVersion,
           content: existingDetails.content,
           edited_by: existingDetails.last_edited_by,
           edited_at: existingDetails.last_edited_at,

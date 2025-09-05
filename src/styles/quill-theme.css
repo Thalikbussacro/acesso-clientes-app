@@ -24,7 +24,7 @@
 .rich-editor .ql-editor {
   color: hsl(var(--foreground));
   padding: 16px;
-  min-height: 120px;
+  min-height: 300px;
 }
 
 .rich-editor .ql-editor.ql-blank::before {
@@ -115,41 +115,45 @@
 }
 
 .rich-editor.read-only .ql-container {
-  border: none;
-  border-radius: calc(var(--radius));
+  display: none;
 }
 
 .rich-editor.read-only .ql-editor {
-  padding: 0;
+  display: none;
 }
 
-/* Content styles */
-.rich-editor .ql-editor h1 {
+/* Content styles - Apply to both editor and rendered content */
+.rich-editor .ql-editor h1,
+.prose h1 {
   font-size: 2em;
   font-weight: 600;
   margin-bottom: 0.5em;
   color: hsl(var(--foreground));
 }
 
-.rich-editor .ql-editor h2 {
+.rich-editor .ql-editor h2,
+.prose h2 {
   font-size: 1.5em;
   font-weight: 600;
   margin-bottom: 0.5em;
   color: hsl(var(--foreground));
 }
 
-.rich-editor .ql-editor h3 {
+.rich-editor .ql-editor h3,
+.prose h3 {
   font-size: 1.25em;
   font-weight: 600;
   margin-bottom: 0.5em;
   color: hsl(var(--foreground));
 }
 
-.rich-editor .ql-editor strong {
+.rich-editor .ql-editor strong,
+.prose strong {
   font-weight: 600;
 }
 
-.rich-editor .ql-editor blockquote {
+.rich-editor .ql-editor blockquote,
+.prose blockquote {
   border-left: 4px solid hsl(var(--border));
   padding-left: 16px;
   margin-left: 0;
@@ -157,7 +161,8 @@
   color: hsl(var(--muted-foreground));
 }
 
-.rich-editor .ql-editor code {
+.rich-editor .ql-editor code,
+.prose code {
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
   padding: 2px 4px;
@@ -166,14 +171,16 @@
   font-size: 0.875em;
 }
 
-.rich-editor .ql-editor .ql-code-block-container {
+.rich-editor .ql-editor .ql-code-block-container,
+.prose .ql-code-block-container {
   background: hsl(var(--muted));
   border: 1px solid hsl(var(--border));
   border-radius: calc(var(--radius));
   margin: 1em 0;
 }
 
-.rich-editor .ql-editor pre {
+.rich-editor .ql-editor pre,
+.prose pre {
   background: hsl(var(--muted));
   color: hsl(var(--muted-foreground));
   padding: 16px;
@@ -182,24 +189,52 @@
   overflow-x: auto;
 }
 
-.rich-editor .ql-editor a {
+.rich-editor .ql-editor a,
+.prose a {
   color: hsl(var(--primary));
   text-decoration: underline;
 }
 
-.rich-editor .ql-editor a:hover {
+.rich-editor .ql-editor a:hover,
+.prose a:hover {
   color: hsl(var(--primary));
   opacity: 0.8;
 }
 
 .rich-editor .ql-editor ul, 
-.rich-editor .ql-editor ol {
+.rich-editor .ql-editor ol,
+.prose ul,
+.prose ol {
   padding-left: 1.5em;
 }
 
-.rich-editor .ql-editor li {
+.rich-editor .ql-editor li,
+.prose li {
   margin-bottom: 0.25em;
 }
+
+/* Ensure consistent paragraph spacing */
+.prose p {
+  margin-bottom: 1em;
+  line-height: 1.6;
+}
+
+/* Color support in read-only mode */
+.prose .ql-color-white { color: #ffffff !important; }
+.prose .ql-color-red { color: #e60000 !important; }
+.prose .ql-color-orange { color: #f90 !important; }
+.prose .ql-color-yellow { color: #ffff00 !important; }
+.prose .ql-color-green { color: #008a00 !important; }
+.prose .ql-color-blue { color: #0066cc !important; }
+.prose .ql-color-purple { color: #9933ff !important; }
+
+.prose .ql-bg-black { background-color: #000000 !important; }
+.prose .ql-bg-red { background-color: #e60000 !important; }
+.prose .ql-bg-orange { background-color: #f90 !important; }
+.prose .ql-bg-yellow { background-color: #ffff00 !important; }
+.prose .ql-bg-green { background-color: #008a00 !important; }
+.prose .ql-bg-blue { background-color: #0066cc !important; }
+.prose .ql-bg-purple { background-color: #9933ff !important; }
 
 /* Focus styles */
 .rich-editor .ql-container:focus-within {
@@ -213,17 +248,44 @@
 }
 
 /* Color picker styles */
-.rich-editor .ql-color-picker .ql-picker-options {
+.rich-editor .ql-color .ql-picker-options,
+.rich-editor .ql-background .ql-picker-options {
   padding: 8px;
   width: 200px;
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  border-radius: calc(var(--radius));
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 }
 
-.rich-editor .ql-color-picker .ql-picker-item {
+.rich-editor .ql-color .ql-picker-item,
+.rich-editor .ql-background .ql-picker-item {
   width: 16px;
   height: 16px;
   border-radius: 2px;
   margin: 2px;
   border: 1px solid hsl(var(--border));
+  cursor: pointer;
+}
+
+.rich-editor .ql-color .ql-picker-item:hover,
+.rich-editor .ql-background .ql-picker-item:hover {
+  transform: scale(1.1);
+  border: 2px solid hsl(var(--primary));
+}
+
+/* Color picker labels */
+.rich-editor .ql-color .ql-picker-label,
+.rich-editor .ql-background .ql-picker-label {
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 6px;
+  cursor: pointer;
+}
+
+.rich-editor .ql-color .ql-picker-label:hover,
+.rich-editor .ql-background .ql-picker-label:hover {
+  background: hsl(var(--accent));
 }
 
 /* Custom scrollbar for editor */

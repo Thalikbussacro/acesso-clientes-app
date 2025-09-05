@@ -455,6 +455,12 @@ export default function ClientDetailsPage() {
         throw new Error('Token not found')
       }
 
+      console.log('Saving content:', {
+        access_point_id: selectedAccessPoint,
+        content: content.substring(0, 100) + '...',
+        content_length: content.length
+      })
+
       const response = await fetch('/api/access-details', {
         method: 'POST',
         headers: {
@@ -706,12 +712,10 @@ export default function ClientDetailsPage() {
                 <RichEditor
                   accessPointName={accessPoints.find(ap => ap.id === selectedAccessPoint)?.name || 'Documento'}
                   content={accessPointContent}
-                  placeholder="Comece a escrever a documentação deste ponto de acesso..."
                   onSave={handleSaveContent}
                   onChange={handleContentChange}
                   lastEditedBy="Usuário Atual"
                   lastEditedAt={stableLastEditedAt}
-                  maxHeight={600}
                 />
               )
             ) : (

@@ -11,7 +11,12 @@
       "Bash(npm run dev:*)",
       "Bash(npx shadcn-ui:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:jam.dev)"
+      "WebFetch(domain:jam.dev)",
+      "Bash(rm:*)",
+      "mcp__Jam__getDetails",
+      "mcp__Jam__getConsoleLogs",
+      "mcp__Jam__getUserEvents",
+      "mcp__Jam__analyzeVideo"
     ],
     "deny": [],
     "ask": []
