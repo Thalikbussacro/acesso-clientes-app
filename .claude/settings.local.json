@@ -16,7 +16,8 @@
       "mcp__Jam__getDetails",
       "mcp__Jam__getConsoleLogs",
       "mcp__Jam__getUserEvents",
-      "mcp__Jam__analyzeVideo"
+      "mcp__Jam__analyzeVideo",
+      "Bash(npx next build:*)"
     ],
     "deny": [],
     "ask": []

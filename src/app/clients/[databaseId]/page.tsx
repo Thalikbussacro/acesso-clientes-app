@@ -404,10 +404,12 @@ export default function ClientsPage() {
 
         {/* Client Management Section - Ultra Compact */}
         <Card>
+          {/* CardHeader temporarily removed - uncomment if needed
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Clientes</CardTitle>
           </CardHeader>
-          <CardContent className="pt-0 pb-4 px-4">
+          */}
+          <CardContent className="pb-4 px-4">
             {isLoadingClients ? (
               <div className="flex items-center justify-center py-6">
                 <div className="text-center">
