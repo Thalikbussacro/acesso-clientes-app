@@ -75,6 +75,7 @@ export function RichEditor({
   const [isLoading, setIsLoading] = useState(true)
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+  const [componentKey, setComponentKey] = useState(0)
 
   // Generate unique editor ID
   if (!editorIdRef.current) {
@@ -119,28 +120,49 @@ export function RichEditor({
     }
 
     if (editorRef.current) {
-      // Remove all Quill-related elements from the editor and its parent
-      const parent = editorRef.current.parentElement
+      // Remove all Quill-related elements from the editor and its parent, and even grandparent
+      const element = editorRef.current
+      const parent = element.parentElement
+      const grandparent = parent?.parentElement
+      
+      // Search for toolbars in multiple levels
       const toolbars = [
-        ...editorRef.current.querySelectorAll('.ql-toolbar'),
-        ...(parent ? parent.querySelectorAll('.ql-toolbar') : [])
+        ...element.querySelectorAll('.ql-toolbar'),
+        ...(parent ? parent.querySelectorAll('.ql-toolbar') : []),
+        ...(grandparent ? grandparent.querySelectorAll('.ql-toolbar') : [])
       ]
       const containers = [
-        ...editorRef.current.querySelectorAll('.ql-container'),
-        ...(parent ? parent.querySelectorAll('.ql-container') : [])
+        ...element.querySelectorAll('.ql-container'),
+        ...(parent ? parent.querySelectorAll('.ql-container') : []),
+        ...(grandparent ? grandparent.querySelectorAll('.ql-container') : [])
       ]
       
       console.log(`Found ${toolbars.length} toolbars and ${containers.length} containers to remove`)
       
-      toolbars.forEach(toolbar => toolbar.remove())
-      containers.forEach(container => container.remove())
+      // Force remove all Quill elements
+      toolbars.forEach(toolbar => {
+        console.log('Removing toolbar:', toolbar)
+        toolbar.remove()
+      })
+      containers.forEach(container => {
+        console.log('Removing container:', container)
+        container.remove()
+      })
       
       // Clear all content and classes from editor element
-      editorRef.current.innerHTML = ''
-      editorRef.current.className = editorRef.current.className
+      element.innerHTML = ''
+      element.className = element.className
         .split(' ')
         .filter(cls => !cls.startsWith('ql-'))
         .join(' ')
+        
+      // Force hide any remaining Quill elements with CSS
+      const remainingQuillElements = document.querySelectorAll('.ql-toolbar, .ql-container')
+      remainingQuillElements.forEach(el => {
+        if (element.contains(el) || parent?.contains(el) || grandparent?.contains(el)) {
+          el.style.display = 'none'
+        }
+      })
     }
 
     // Remove from global registry
@@ -158,20 +180,35 @@ export function RichEditor({
     const element = editorRef.current
 
     // Only initialize when in editing mode
-    if (!isEditing || !element || !editorId || isInitializedRef.current || EDITOR_INSTANCES.has(editorId)) {
-      console.log(`Skipping Quill initialization - isEditing: ${isEditing}, element: ${!!element}, editorId: ${editorId}, initialized: ${isInitializedRef.current}, inRegistry: ${EDITOR_INSTANCES.has(editorId)}`)
+    if (!isEditing || !element || !editorId) {
+      console.log(`Skipping Quill initialization - isEditing: ${isEditing}, element: ${!!element}, editorId: ${editorId}`)
       return
     }
     
-    // Extra check: if element already has Quill content, clean it first
-    if (element.querySelector('.ql-toolbar') || element.querySelector('.ql-container')) {
-      console.log(`Found existing Quill elements, cleaning up first`)
-      const toolbars = element.querySelectorAll('.ql-toolbar')
-      const containers = element.querySelectorAll('.ql-container')
-      toolbars.forEach(toolbar => toolbar.remove())
-      containers.forEach(container => container.remove())
-      element.innerHTML = ''
-    }
+    // ALWAYS cleanup first to prevent multiple toolbars
+    console.log(`Force cleanup before initializing Quill`)
+    cleanup()
+    
+    // Double-check: remove any remaining Quill elements in the entire document
+    const allToolbars = document.querySelectorAll('.ql-toolbar')
+    const allContainers = document.querySelectorAll('.ql-container')
+    console.log(`Found ${allToolbars.length} total toolbars and ${allContainers.length} total containers in document`)
+    
+    allToolbars.forEach(toolbar => {
+      if (element.contains(toolbar) || toolbar.closest('.rich-editor')) {
+        console.log('Removing orphaned toolbar:', toolbar)
+        toolbar.remove()
+      }
+    })
+    allContainers.forEach(container => {
+      if (element.contains(container) || container.closest('.rich-editor')) {
+        console.log('Removing orphaned container:', container)
+        container.remove()
+      }
+    })
+    
+    // Clear element completely
+    element.innerHTML = ''
 
     try {
       console.log(`Initializing Quill for editor: ${editorId}`)
@@ -311,6 +348,9 @@ export function RichEditor({
       setOriginalContent(currentContent)
       setHasChanges(false)
       setIsEditing(false)
+      
+      // Force component refresh to clean any remaining Quill elements
+      setTimeout(() => setComponentKey(prev => prev + 1), 100)
     } catch (error) {
       console.error('Save failed:', error)
     }
@@ -330,6 +370,9 @@ export function RichEditor({
       setCurrentContent(originalContent)
       setHasChanges(false)
       setIsEditing(false)
+      
+      // Force component refresh to clean any remaining Quill elements
+      setTimeout(() => setComponentKey(prev => prev + 1), 100)
       
       onCancel?.()
     }
@@ -354,7 +397,7 @@ export function RichEditor({
   }
 
   return (
-    <Card className={className}>
+    <Card className={className} key={componentKey}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -386,7 +429,6 @@ export function RichEditor({
                       onClick={handleCancel} 
                       variant="outline" 
                       size="sm"
-                      disabled={!hasChanges}
                     >
                       <X className="h-4 w-4 mr-2" />
                       Cancelar
@@ -420,7 +462,7 @@ export function RichEditor({
             {/* Quill Editor - only render in editing mode */}
             <div 
               ref={editorRef}
-              className="min-h-[300px] rich-editor editing"
+              className={`min-h-[300px] rich-editor ${isEditing ? 'editing' : ''}`}
               style={{ 
                 maxHeight: '500px',
                 overflow: 'auto'

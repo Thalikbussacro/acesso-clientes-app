@@ -111,15 +111,25 @@
 
 /* Read-only mode styles */
 .rich-editor.read-only .ql-toolbar {
-  display: none;
+  display: none !important;
 }
 
 .rich-editor.read-only .ql-container {
-  display: none;
+  display: none !important;
 }
 
 .rich-editor.read-only .ql-editor {
-  display: none;
+  display: none !important;
+}
+
+/* Force hide toolbar when not in editing mode */
+.rich-editor:not(.editing) .ql-toolbar,
+.rich-editor:not(.editing) .ql-container {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* Content styles - Apply to both editor and rendered content */
