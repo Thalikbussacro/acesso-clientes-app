@@ -42,7 +42,7 @@ const ALLOWED_TAGS = [
 
 const ALLOWED_ATTRIBUTES = {
   'a': ['href', 'title', 'target', 'rel'],
-  'span': ['style'],
+  'span': ['style', 'class', 'contenteditable'],
   'p': ['style'],
   'strong': ['style'],
   'em': ['style'],
@@ -56,7 +56,7 @@ const ALLOWED_ATTRIBUTES = {
   'blockquote': ['style'],
   'ul': ['style'],
   'ol': ['style'],
-  'li': ['style']
+  'li': ['style', 'data-list']
 } as const
 
 // Allowed CSS properties (Quill.js style properties)
@@ -96,7 +96,7 @@ export function sanitizeContent(content: string): string {
       .replace(/<link[^>]*>/gi, '')
       .replace(/<meta[^>]*>/gi, '')
       .replace(/<style[^>]*>.*?<\/style>/gi, '')
-      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
+      .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '') // Remove event handlers
       .replace(/javascript:/gi, '') // Remove javascript: URLs
   }
 
@@ -164,7 +164,7 @@ export function validateContentStructure(content: string): { isValid: boolean; e
     errors.push('JavaScript URLs are not allowed')
   }
   
-  if (content.match(/on\w+\s*=/i)) {
+  if (content.match(/\bon\w+\s*=/i)) {
     errors.push('Event handlers are not allowed')
   }
   
