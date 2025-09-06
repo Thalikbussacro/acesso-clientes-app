@@ -147,7 +147,7 @@ export function TextEditor({
                 <div className="text-center">
                   <Edit3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>Nenhum conteúdo adicionado ainda</p>
-                  <p className="text-sm">Clique em "Editar" para começar</p>
+                  <p className="text-sm">Clique em &quot;Editar&quot; para começar</p>
                 </div>
               </div>
             )}

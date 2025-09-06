@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Edit3, Save, X, Eye, User } from 'lucide-react'
+import Quill from 'quill'
 
 interface RichEditorV2Props {
   accessPointName?: string
@@ -22,7 +23,7 @@ export function RichEditorV2({
   lastEditedAt
 }: RichEditorV2Props) {
   const editorRef = useRef<HTMLDivElement>(null)
-  const quillRef = useRef<any>(null)
+  const quillRef = useRef<Quill | null>(null)
   
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -253,7 +254,7 @@ export function RichEditorV2({
             <div className="text-center">
               <Edit3 className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p>Nenhum conteúdo adicionado ainda</p>
-              <p className="text-sm">Clique em "Editar" para começar</p>
+              <p className="text-sm">Clique em &quot;Editar&quot; para começar</p>
             </div>
           </div>
         )}

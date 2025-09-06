@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { verify } from 'jsonwebtoken'
 import { hashPassword } from '@/lib/password'
 import { db } from '@/lib/db'
 

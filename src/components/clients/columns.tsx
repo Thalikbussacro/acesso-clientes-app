@@ -72,7 +72,7 @@ export function createColumns(
   columns.push({
     id: 'lastAccess',
     header: 'Último Acesso',
-    cell: ({ row }) => {
+    cell: () => {
       // Mock data - would come from database last_access field
       const mockLastAccess = new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000)
       return (

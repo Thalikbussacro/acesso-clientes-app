@@ -160,7 +160,7 @@ export function RichEditor({
       const remainingQuillElements = document.querySelectorAll('.ql-toolbar, .ql-container')
       remainingQuillElements.forEach(el => {
         if (element.contains(el) || parent?.contains(el) || grandparent?.contains(el)) {
-          el.style.display = 'none'
+          (el as HTMLElement).style.display = 'none'
         }
       })
     }

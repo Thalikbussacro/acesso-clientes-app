@@ -27,7 +27,6 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
   const [timeRemaining, setTimeRemaining] = useState<number>(0)
   const [totalTime, setTotalTime] = useState<number>(0)
   const [isExpired, setIsExpired] = useState(false)
-  const [shouldShowRevalidation, setShouldShowRevalidation] = useState(false)
   const [sessionData, setSessionData] = useState<SessionData | null>(null)
   
   const router = useRouter()
@@ -63,7 +62,6 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
             if (data.expiresAt) {
               setTimeRemaining(data.expiresAt - Date.now())
               setTotalTime(data.timeoutMinutes * 60 * 1000)
-              setShouldShowRevalidation(false)
               revalidationShownRef.current = false
               setIsExpired(false)
               setSessionData(data)
@@ -193,7 +191,6 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
     setSessionData(updatedData)
     setTimeRemaining(updatedData.expiresAt - now)
     setTotalTime(updatedData.timeoutMinutes * 60 * 1000)
-    setShouldShowRevalidation(false)
     revalidationShownRef.current = false
     setIsExpired(false)
     
@@ -204,18 +201,6 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
     })
   }, [databaseId])
 
-  // Format time remaining for display
-  const formatTimeRemaining = (milliseconds: number) => {
-    const totalSeconds = Math.floor(milliseconds / 1000)
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = totalSeconds % 60
-    
-    if (minutes > 0) {
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`
-    } else {
-      return `${seconds}s`
-    }
-  }
 
   // Calculate progress percentage
   const getProgressPercentage = () => {
@@ -266,7 +251,6 @@ export function SessionTimer({ databaseId, onSessionExpired, onRevalidationNeede
           
           // Check if we should show revalidation modal (1 minute remaining)
           if (remaining <= 60000 && remaining > 0 && !revalidationShownRef.current) {
-            setShouldShowRevalidation(true)
             revalidationShownRef.current = true
             onRevalidationNeeded()
           }
